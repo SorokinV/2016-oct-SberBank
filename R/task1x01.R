@@ -1,13 +1,131 @@
+require(dplyr)
+require(tidyr)
+require(caTools)
+require(xgboost)
+
+#--------------------------------------------------------
+
+trs = read.csv("./Data/transactions.csv",stringsAsFactors = FALSE)
+str(trs)
+
+#--------------------------------------------------------
+
+regexpr("[0-9]+","00 00:00:00")
+dd = regexpr("[0-9]+",trs$tr_datetime)
+ds = substr(trs$tr_datetime,dd,dd+attr(dd,"match.length")-1); head(ds)
+tds= table(ds)
+
+rm(dd)
+
+#---------------------------------------------------------
+
+xx <- as.Date("2004-01-01","%Y-%m-%d"); xx
+x0 <- xx-153
+
+#---------------------------------------------------------
+
+agg.code = 
+  ddply(trs,.(customer_id,mcc_code),summarise,
+        N=length(mcc_code),
+        ssum=sum(amount),
+        mmean=mean(amount),
+        ssd=sd=sd(amount))
+
+agg.w.code = spread(agg.code[,c(1,2,3)],mcc_code,N,fill=0)
+
+
+#--------------------------------------------------------
+
 x=rowSums(agg.w.code[,-c(1)]); head(x)
 y=agg.w.code[,-c(1)]/x; head(y)
 xy  = y; xy$customer_id=agg.w.code$customer_id; head(xy)
 xys = merge(xy,gnd,by='customer_id'); head(xys)
-agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
-xyp = predict(agg.w.code.sex.glm,type='response')
+
+#--------------------------------------------------------
+
+param <- list( objective = "binary:logistic", 
+               booster = "gbtree",
+               #colsample_bytree = 0.5, # 0.5, #0.5, # 0.4, 
+               #               subsample = 0.9,
+               #               eval_metric = evalAuc,
+               eval_metric = "auc",
+               #tree_method = "exact",
+               #gamma = 0.0022, #2.25, #2.25, # 1, # 2.25, #0.05,
+               #min_child_weight = 5, 
+               #subsample = 0.6, #0.8,
+               silent    = 0)  
+
+
+dYtrain     <- as.matrix(xys[,-c(1,length(xys))])
+dYlabel     <- xys$gender
+
+tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
+
+#agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
+#xyp = predict(agg.w.code.sex.glm,type='response')
+
+history = xgb.cv(tmp.matrix, 
+                 nfold = 10, 
+                 #folds = folds,
+                 #eta=eta, 
+                 #max_depth=max_depth, 
+                 params =param, 
+                 nrounds  =  200,
+                 #nrounds =  ifelse(eta<0.035,3000,600), 
+                 #                 metrics = "auc", 
+                 maximize = TRUE, #maxima, 
+                 stratified = TRUE,
+                 prediction=TRUE,
+                 early.stop.round = 50, 
+                 print.every.n = 25);
+
+#     ------------ look results and select best result in history
+
+if (!is.null(history$pred)) {
+  history.pred = history$pred
+  history      = history$dt
+}
+
+max(history$test.auc.mean);
+h_max=which.max(history$test.auc.mean);
+print(c(h_max,"-->",history$test.auc.mean[h_max],history$test.auc.std[h_max],history$train.auc.mean[h_max],history$train.auc.std[h_max]));
+plot(history$test.auc.mean)
+plot(history$test.auc.mean[history$test.auc.mean>0.839])
+#plot(history$test.auc.std[history$test.auc.std<0.015])
+
+#--------------------------------------------------------
 
 xyss= merge(xy,gnd,by='customer_id',all.x = TRUE);
-xypp= predict(agg.w.code.sex.glm,newdata=xyss, type='response')
+#xypp= predict(agg.w.code.sex.glm,newdata=xyss, type='response')
 
+dYtest     <- as.matrix(xyss[,-c(1,length(xyss))])
+
+bst = xgb.train (     
+  params =param, 
+  tmp.matrix,
+  #eta=eta, 
+  #max_depth=max_depth, 
+  nrounds = h_max, # 1500, # ifelse(eta<0.035,3000,800), 
+  verbose=1, 
+  print.every.n = 25,
+  #watchlist=list(eval = dtest, train = tmp.matrix),
+  watchlist=list(eval = tmp.matrix),
+  #watchlist=list(train = tmp.matrix),
+  metrics = "auc", 
+  stratified = TRUE,
+  early.stop.round = 50,
+  maximize = TRUE)
+
+
+pre.train        = predict(bst,tmp.matrix);
+pre.test         = predict(bst,dYtest);
+
+AUC = colAUC(pre.train,dYlabel);
+print (sprintf("%s work ended:-----> AUC=%10.8f",format(Sys.time(),"%Y-%m-%d %H:%M:%S"),AUC));
+
+xypp = pre.test
+
+#--------------------------------------------------------
 
 xypp[!is.na(xyss$gender)]=xyss$gender[!is.na(xyss$gender)]
 
@@ -21,18 +139,7 @@ outfile = paste("./Result/task1-",nStep,'.csv',sep='')
 write.csv(xy1res,file=outfile,quote=FALSE,row.names=FALSE)
 
 
-/* don't calculate
+#--------------------------------------------------------
 
-x=rowSums(agg.w.type[,-c(1)]); head(x)
-y=agg.w.type[,-c(1)]/x; head(y)
-xy  = y; xy$customer_id=agg.w.type$customer_id; head(xy)
-xys = merge(xy,gnd,by='customer_id'); head(xys)
-agg.w.type.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
-
-*/
-
-
-
-  
 rm(x,y,xy,xys)
 rm(xypp,xyss)
