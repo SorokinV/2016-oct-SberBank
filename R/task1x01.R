@@ -1,4 +1,4 @@
-require(dplyr)
+require(plyr)
 require(tidyr)
 require(caTools)
 require(xgboost)
