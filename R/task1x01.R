@@ -61,16 +61,18 @@ dYlabel     <- xys$gender
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
+eta <- 0.05
+
 #agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
 #xyp = predict(agg.w.code.sex.glm,type='response')
 
 history = xgb.cv(tmp.matrix, 
-                 nfold = 10, 
+                 nfold = 8, #25, # 10, 
                  #folds = folds,
-                 #eta=eta, 
+                 eta=eta, 
                  #max_depth=max_depth, 
                  params =param, 
-                 nrounds  =  200,
+                 nrounds  =  400,
                  #nrounds =  ifelse(eta<0.035,3000,600), 
                  #                 metrics = "auc", 
                  maximize = TRUE, #maxima, 
@@ -90,7 +92,7 @@ max(history$test.auc.mean);
 h_max=which.max(history$test.auc.mean);
 print(c(h_max,"-->",history$test.auc.mean[h_max],history$test.auc.std[h_max],history$train.auc.mean[h_max],history$train.auc.std[h_max]));
 plot(history$test.auc.mean)
-plot(history$test.auc.mean[history$test.auc.mean>0.839])
+plot(history$test.auc.mean[history$test.auc.mean>0.84])
 #plot(history$test.auc.std[history$test.auc.std<0.015])
 
 #--------------------------------------------------------
@@ -103,7 +105,7 @@ dYtest     <- as.matrix(xyss[,-c(1,length(xyss))])
 bst = xgb.train (     
   params =param, 
   tmp.matrix,
-  #eta=eta, 
+  eta=eta, 
   #max_depth=max_depth, 
   nrounds = h_max, # 1500, # ifelse(eta<0.035,3000,800), 
   verbose=1, 
