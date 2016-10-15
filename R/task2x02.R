@@ -1,7 +1,7 @@
 require(plyr)
 require(tidyr)
-require(caTools)
-require(xgboost)
+
+require(forecast)
 
 #
 # get minus transaction
@@ -19,42 +19,59 @@ agg.mcc2 =
         mmean=mean(amount),
         ssd=sd(amount))
 
+# -----------------------------------------
+# build grid for mcc-code and day
 
-mcc = list("mcc_code"=sort(unique(trs$mcc_code))); str(mcc)
-days= list("day"=c(1:30)); str(days)
+df.temp.0 = data.frame("day"=c(min(agg.mcc2$day):max(agg.mcc2$day)))
+iCount    = 0
+for (i in sort(unique(agg.mcc2$mcc_code))) {
+  df.temp.1 = df.temp.0;
+  df.temp.1$mcc_code = i;
+  if (iCount==0) {
+    df = df.temp.1  
+  } else {
+    df = rbind(df,df.temp.1)
+  }
+  iCount = iCount + 1;
+}
+rm(iCount,df.temp.0,df.temp.1)
 
-grid= data.frame(days)
-grid$mcc_code = mcc$mcc_code[1]
 
-gridtemp = grid
+# build timeSeries from all days min-max
 
-for (i in mcc$mcc_code[2:length(mcc$mcc_code)]) {
-    gridtemp$mcc_code = i
-    grid = rbind(grid,gridtemp)
+agg.mcc2.ts = merge(df[c(2,1)],agg.mcc2[c(1,2,3)],all.x=TRUE); 
+agg.mcc2.ts$ssum[is.na(agg.mcc2.ts$ssum)]=0.0; str(agg.mcc2.ts)
+
+rm(df)
+
+# build stl for all mcc code
+
+df = data.frame()
+
+for (mcc in unique(agg.mcc2.ts$mcc_code)) {
+  zz           = ts(agg.mcc2.ts$ssum[agg.mcc2.ts$mcc_code==mcc],start=0,frequency = 30)
+  zz.stl       = stlm(log(500-zz),s.window = 20,method="arima")
+#  zz.stl       = stlm(log(500-zz),s.window = "periodic",method="arima")
+  #zz.stl       = stlm(log(500-zz))
+  #  zz.stl       = stlm(zz)
+  zz.for       = forecast(zz.stl,h=30)
+  dff          = data.frame("volume"=exp(as.numeric(zz.for$mean))-500)
+#  dff          = data.frame("volume"=as.numeric(zz.for$mean))
+  dff$mcc_code = mcc
+  dff$day      = c(1:30)
+  df           = rbind(df,dff)
+  
 }
 
-xday = 366
+str(dff)
 
-xyz1 = x0+max(agg.mcc2$day)+1; xyz1=xyz1-xday; xyz1
-xyz1x= xyz1-x0; as.numeric(xyz1x)
+rm(zz,zz.stl,zz.for,dff)
 
-gridold = subset(agg.mcc2,(day>=xyz1x)&(day<xyz1x+31),select=c('mcc_code','day','ssum'))
+df$day = df$day+max(agg.mcc2.ts$day)
 
-gridold$volume = exp(log(500-gridold$ssum))-500
-gridold$ssum = NULL
-
-gridold$day = gridold$day+xday; head(gridold)
-sort(unique(gridold$day))
-sort(unique(grid$day))
-tail(sort(unique(agg.mcc2$day)))
-
-grid$day = grid$day+max(agg.mcc2$day)
-
-#gridnew = merge(grid,gridold,by=c("mcc_code","day"),all.x=TRUE)
-gridnew = merge(grid,gridold,all.x=TRUE)
-gridnew$volume[is.na(gridnew$volume)] = 0
+#---------------------------------------------
 
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
 outfile = paste("./Result/task2-",nStep,'.csv',sep='') 
-write.csv(gridnew[c(2,1,3)],file=outfile,quote=FALSE,row.names=FALSE)
+write.csv(df[c(2,3,1)],file=outfile,quote=FALSE,row.names=FALSE)
 
