@@ -31,14 +31,35 @@ agg.code =
         mmean=mean(amount),
         ssd=sd(amount))
 
-agg.w.code = spread(agg.code[,c(1,2,3)],mcc_code,N,fill=0)
+agg.w.code   = spread(agg.code[,c(1,2,3)],mcc_code,N,fill=0)
+mcc.names    = names(agg.w.code)
+mcc.names    = c("customer_id",paste('a',mcc.names[2:length(mcc.names)],sep=""))
+names(agg.w.code) = mcc.names
 
-
-#--------------------------------------------------------
 
 x=rowSums(agg.w.code[,-c(1)]); head(x)
 y=agg.w.code[,-c(1)]/x; head(y)
 xy  = y; xy$customer_id=agg.w.code$customer_id; head(xy)
+
+#--------------------------------------------------------
+
+agg.w.code.2 = spread(agg.code[,c(1,2,5)],mcc_code,mmean,fill=0)
+mcc.names    = names(agg.w.code.2)
+mcc.names    = c("customer_id",paste('b',mcc.names[2:length(mcc.names)],sep=""))
+names(agg.w.code.2) = mcc.names
+agg.w.code.2$customer_id = NULL
+
+xy = cbind(xy,agg.w.code.2)
+
+agg.w.code.2 = spread(agg.code[,c(1,2,4)],mcc_code,mmean,fill=0)
+mcc.names    = names(agg.w.code.2)
+mcc.names    = c("customer_id",paste('c',mcc.names[2:length(mcc.names)],sep=""))
+names(agg.w.code.2) = mcc.names
+agg.w.code.2$customer_id = NULL
+
+xy = cbind(xy,agg.w.code.2)
+
+
 xys = merge(xy,gnd,by='customer_id'); head(xys)
 
 #--------------------------------------------------------
@@ -56,12 +77,12 @@ param <- list( objective = "binary:logistic",
                silent    = 0)  
 
 
-dYtrain     <- as.matrix(xys[,-c(1,length(xys))])
+dYtrain     <- as.matrix(xys[,-grep("customer_id|gender",names(xys))])
 dYlabel     <- xys$gender
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
-eta <- 0.02
+eta <- 0.05
 
 #agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
 #xyp = predict(agg.w.code.sex.glm,type='response')

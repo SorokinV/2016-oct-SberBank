@@ -50,7 +50,7 @@ df = data.frame()
 
 for (mcc in unique(agg.mcc2.ts$mcc_code)) {
   zz           = ts(agg.mcc2.ts$ssum[agg.mcc2.ts$mcc_code==mcc],start=0,frequency = 30)
-  zz.stl       = stlm(log(500-zz),s.window = 20,method="arima")
+  zz.stl       = stlm(log(500-zz),s.window = 26,method="arima")
 #  zz.stl       = stlm(log(500-zz),s.window = "periodic",method="arima")
   #zz.stl       = stlm(log(500-zz))
   #  zz.stl       = stlm(zz)
