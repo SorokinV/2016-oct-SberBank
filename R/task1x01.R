@@ -29,7 +29,7 @@ agg.code =
         N=length(mcc_code),
         ssum=sum(amount),
         mmean=mean(amount),
-        ssd=sd=sd(amount))
+        ssd=sd(amount))
 
 agg.w.code = spread(agg.code[,c(1,2,3)],mcc_code,N,fill=0)
 
@@ -61,7 +61,7 @@ dYlabel     <- xys$gender
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
-eta <- 0.05
+eta <- 0.02
 
 #agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
 #xyp = predict(agg.w.code.sex.glm,type='response')
@@ -72,7 +72,7 @@ history = xgb.cv(tmp.matrix,
                  eta=eta, 
                  #max_depth=max_depth, 
                  params =param, 
-                 nrounds  =  400,
+                 nrounds  =  2400,
                  #nrounds =  ifelse(eta<0.035,3000,600), 
                  #                 metrics = "auc", 
                  maximize = TRUE, #maxima, 
