@@ -1,0 +1,155 @@
+require(plyr)
+#require(tidyr)
+require(caTools)
+require(xgboost)
+
+
+#-------------------------------------------------
+
+str(trs)
+
+trsm.sex = merge(trs,gnd,by='customer_id',all.x=TRUE)
+
+agg.code.sex = 
+  ddply(trsm.sex,.(mcc_code),summarise,
+        pr   =mean(gender,na.rm = TRUE),
+        pr.na=mean(gender))
+
+agg.code.sex = subset(agg.code.sex,is.na(agg.code.sex$pr.na))
+agg.code.sex$pr.na = NULL
+
+agg.type.sex = 
+  ddply(trsm.sex,.(tr_type),summarise,
+        pr   =mean(gender,na.rm = TRUE),
+        pr.na=mean(gender))
+
+agg.type.sex = subset(agg.type.sex,is.na(agg.type.sex$pr.na))
+agg.type.sex$pr.na = NULL
+
+agg.term.sex = 
+  ddply(trsm.sex,.(term_id),summarise,
+        pr   =mean(gender,na.rm = TRUE),
+        pr.na=mean(gender))
+
+agg.term.sex = subset(agg.term.sex,is.na(agg.term.sex$pr.na))
+agg.term.sex$pr.na = NULL
+
+trsm.sex = merge(trsm.sex,agg.code.sex,by='mcc_code',all.x=TRUE)
+trsm.sex = merge(trsm.sex,agg.type.sex,by='tr_type',all.x=TRUE)
+trsm.sex = merge(trsm.sex,agg.term.sex,by='term_id',all.x=TRUE)
+#trsm.sex = merge(trsm.sex,gnd,by='customer_id',all.x=TRUE)
+
+agg.customer = 
+  ddply(trsm.sex,.(customer_id),summarise,
+        pr.code = mean(pr.x,na.rm = TRUE),
+        pr.type = mean(pr.y,na.rm = TRUE),
+        pr.term = mean(pr,na.rm = TRUE))
+
+agg.customer.sex = merge(agg.customer,gnd,by='customer_id',all.x=TRUE)
+
+agg.customer.1   = subset(agg.customer.sex,!is.na(agg.customer.sex$gender))
+
+agg.customer.2   = subset(agg.customer.sex, is.na(agg.customer.sex$gender))
+summary(agg.customer.2)
+agg.customer.1$pr.term[is.na(agg.customer.1$pr.term)]=0.5
+agg.customer.2$pr.term[is.na(agg.customer.2$pr.term)]=0.5
+
+
+#--------------------------------------------------------
+
+param <- list( objective = "binary:logistic", 
+               booster = "gbtree",
+               #colsample_bytree = 0.5, # 0.5, #0.5, # 0.4, 
+               #               subsample = 0.9,
+               #               eval_metric = evalAuc,
+               eval_metric = "auc",
+               #tree_method = "exact",
+               #gamma = 1.5, #0.0022, #2.25, #2.25, # 1, # 2.25, #0.05,
+               #min_child_weight = 8, #6, #7, #10, #8, #5, 
+               #subsample = 0.6, #0.8,
+               silent    = 0)  
+
+
+dYtrain     <- as.matrix(agg.customer.1[,-grep("customer_id|gender|pr.type",names(agg.customer.1))])
+dYlabel     <- agg.customer.1$gender
+dYtest      <- as.matrix(agg.customer.2[,-grep("customer_id|gender|pr.type",names(agg.customer.2))])
+
+
+tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
+
+eta <- 0.02 #0.1 #0.05
+
+#agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
+#xyp = predict(agg.w.code.sex.glm,type='response')
+
+history = xgb.cv(tmp.matrix, 
+                 nfold = 10, #5, #8, #25, # 10, 
+                 #folds = folds,
+                 eta=eta, 
+                 #max_depth=max_depth, 
+                 params =param, 
+                 nrounds  =  2400,
+                 #nrounds =  ifelse(eta<0.035,3000,600), 
+                 #                 metrics = "auc", 
+                 maximize = TRUE, #maxima, 
+                 stratified = TRUE,
+                 prediction=TRUE,
+                 early.stop.round = 50, 
+                 print.every.n = 25);
+
+#     ------------ look results and select best result in history
+
+if (!is.null(history$pred)) {
+  history.pred = history$pred
+  history      = history$dt
+}
+
+max(history$test.auc.mean);
+h_max=which.max(history$test.auc.mean);
+print(c(h_max,"-->",history$test.auc.mean[h_max],history$test.auc.std[h_max],history$train.auc.mean[h_max],history$train.auc.std[h_max]));
+plot(history$test.auc.mean)
+plot(history$test.auc.mean[history$test.auc.mean>0.875])
+#plot(history$test.auc.std[history$test.auc.std<0.015])
+
+#---------------------------------------------------------
+
+bst = xgb.train (     
+  params =param, 
+  tmp.matrix,
+  eta=eta, 
+  #max_depth=max_depth, 
+  nrounds = h_max, # 1500, # ifelse(eta<0.035,3000,800), 
+  verbose=1, 
+  print.every.n = 25,
+  #watchlist=list(eval = dtest, train = tmp.matrix),
+  watchlist=list(eval = tmp.matrix),
+  #watchlist=list(train = tmp.matrix),
+  metrics = "auc", 
+  stratified = TRUE,
+  early.stop.round = 50,
+  maximize = TRUE)
+
+
+pre.train        = predict(bst,tmp.matrix);
+pre.test         = predict(bst,dYtest);
+
+#pre.test         = agg.customer.2$pr.term
+
+#---------------------------------------------------------
+#agg.customer.glm=glm(gender~.-customer_id,data=agg.customer.1,family='binomial')
+#summary(agg.customer.glm)
+#pre.train        = predict(agg.customer.glm,type='response')
+
+hist(pre.train,breaks = 40)
+colAUC(pre.train,agg.customer.1$gender)
+colAUC(agg.customer.1$pr.term,agg.customer.1$gender)
+
+#pre.test         = predict(agg.customer.glm,type='response',newdata = agg.customer.2)
+hist(pre.test,breaks = 40)
+
+task1res= list('customer_id'=agg.customer.2$customer_id,
+               "gender"=sprintf("%12.10f",pre.test))
+nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
+outfile = paste("./Result/task1-",nStep,'.csv',sep='') 
+write.csv(task1res,file=outfile,quote=FALSE,row.names=FALSE)
+
