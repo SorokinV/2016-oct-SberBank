@@ -8,16 +8,29 @@ require(forecast)
 
 trsm = subset(trs,trs$amount<0.0)
 
-dd = regexpr("[0-9]+",trs$tr_datetime); 
+dd = regexpr("[0-9]+",trs$tr_datetime);
 ds = as.numeric(substr(trs$tr_datetime,dd,dd+attr(dd,"match.length")-1)); 
 ds.max = max(ds)
 
+#### ds.max = ds.max - 30  ###
 
 dsm  = as.numeric(ds[trs$amount<0.0])
 trsm$day = dsm
 #dsmw = dsm %% 7
 
 rm(dd,ds,dsm)
+
+hh = regexpr("[0-9]+[0-9]+:[0-9]+[0-9]+:[0-9]+[0-9]+",trsm$tr_datetime)
+h  = substr(trsm$tr_datetime,hh+0,hh+8-1)
+h  = strptime(h,"%H:%M:%S"); 
+
+trsm$time =(h$hour*60+h$min)*60+(h$sec%%60);
+
+rm(h,hh)
+
+trsm = subset(trsm,time>0) ###
+
+#----------------------------------------------------
 
 agg2.mcc = 
   ddply(trsm,.(mcc_code,day),summarise,
@@ -49,6 +62,8 @@ rm(iCount,df.temp.0,df.temp.1)
 agg2.mcc.ts = merge(df[c(2,1)],agg2.mcc[c(1,2,3)],all.x=TRUE); 
 agg2.mcc.ts$ssum[is.na(agg2.mcc.ts$ssum)]=0.0; str(agg2.mcc.ts)
 
+agg2.mcc.ts$wday = (agg2.mcc.ts$day+5)%%7  ###
+
 rm(df)
 
 # build stl for all mcc code
@@ -56,7 +71,7 @@ rm(df)
 task2 = data.frame()
 
 for (mcc in unique(agg2.mcc.ts$mcc_code)) {
-  zz           = ts(agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==mcc],start=0,frequency = 30)
+  zz           = ts(agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==mcc],start=0,frequency = 7)
   zz.stl       = stlm(log(500-zz),s.window = 24,method="arima")
 #  zz.stl       = stlm(log(500-zz),s.window = "periodic",method="arima")
   #zz.stl       = stlm(log(500-zz))
@@ -70,7 +85,8 @@ for (mcc in unique(agg2.mcc.ts$mcc_code)) {
   
 }
 
-str(dff); str(task2)
+#str(dff); 
+str(task2)
 
 rm(zz,zz.stl,zz.for,dff)
 
