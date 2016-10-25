@@ -71,14 +71,11 @@ rm(df)
 task2 = data.frame()
 
 for (mcc in unique(agg2.mcc.ts$mcc_code)) {
-  zz           = ts(agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==mcc],frequency = 7)
-  zz.stl       = stlm(log(500-zz),s.window = 24,method="arima")
-#  zz.stl       = stlm(log(500-zz),s.window = "periodic",method="arima")
-  #zz.stl       = stlm(log(500-zz))
-  #  zz.stl       = stlm(zz)
-  zz.for       = forecast(zz.stl,h=30)
+  zz           = agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==mcc]
+  zz.ts        = ts(log(500-zz),frequency = 7)
+  zz.arima     = auto.arima(zz.ts,max.order=15,max.P=5,max.D=5,max.p = 5,max.q = 5,max.Q = 3)
+  zz.for       = forecast(zz.arima,h=30)
   dff          = data.frame("volume"=exp(as.numeric(zz.for$mean))-500)
-#  dff          = data.frame("volume"=as.numeric(zz.for$mean))
   dff$mcc_code = mcc
   dff$day      = c(1:30)
   task2        = rbind(task2,dff)
