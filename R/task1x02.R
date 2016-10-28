@@ -8,51 +8,53 @@ require(xgboost)
 
 str(trs)
 
-trsm.sex = merge(trs,gnd,by='customer_id',all.x=TRUE)
+trs.sex = merge(trs,gnd,by='customer_id',all.x=TRUE)
 
-agg.code.sex = 
-  ddply(trsm.sex,.(mcc_code),summarise,
+agg1.code.sex = 
+  ddply(trs.sex,.(mcc_code,tr_type),summarise,
         pr   =mean(gender,na.rm = TRUE),
         pr.na=mean(gender))
 
-agg.code.sex = subset(agg.code.sex,is.na(agg.code.sex$pr.na))
-agg.code.sex$pr.na = NULL
+agg1.code.sex = subset(agg1.code.sex,is.na(agg1.code.sex$pr.na))
+agg1.code.sex$pr.na = NULL
 
-agg.type.sex = 
-  ddply(trsm.sex,.(tr_type),summarise,
+if (FALSE) {
+agg1.type.sex = 
+  ddply(trs.sex,.(tr_type),summarise,
         pr   =mean(gender,na.rm = TRUE),
         pr.na=mean(gender))
 
-agg.type.sex = subset(agg.type.sex,is.na(agg.type.sex$pr.na))
-agg.type.sex$pr.na = NULL
+agg1.type.sex = subset(agg1.type.sex,is.na(agg1.type.sex$pr.na))
+agg1.type.sex$pr.na = NULL
+}
 
-agg.term.sex = 
-  ddply(trsm.sex,.(term_id),summarise,
+agg1.term.sex = 
+  ddply(trs.sex,.(term_id),summarise,
         pr   =mean(gender,na.rm = TRUE),
         pr.na=mean(gender))
 
-agg.term.sex = subset(agg.term.sex,is.na(agg.term.sex$pr.na))
-agg.term.sex$pr.na = NULL
+agg1.term.sex = subset(agg1.term.sex,is.na(agg1.term.sex$pr.na))
+agg1.term.sex$pr.na = NULL
 
-trsm.sex = merge(trsm.sex,agg.code.sex,by='mcc_code',all.x=TRUE)
-trsm.sex = merge(trsm.sex,agg.type.sex,by='tr_type',all.x=TRUE)
-trsm.sex = merge(trsm.sex,agg.term.sex,by='term_id',all.x=TRUE)
-#trsm.sex = merge(trsm.sex,gnd,by='customer_id',all.x=TRUE)
+trs.sex = merge(trs.sex,agg1.code.sex,by=c('mcc_code','tr_type'),all.x=TRUE)
+#trs.sex = merge(trs.sex,agg1.type.sex,by='tr_type',all.x=TRUE)
+trs.sex = merge(trs.sex,agg1.term.sex,by='term_id',all.x=TRUE)
+#trs.sex = merge(trs.sex,gnd,by='customer_id',all.x=TRUE)
 
-agg.customer = 
-  ddply(trsm.sex,.(customer_id),summarise,
+agg1.customer = 
+  ddply(trs.sex,.(customer_id),summarise,
         pr.code = mean(pr.x,na.rm = TRUE),
-        pr.type = mean(pr.y,na.rm = TRUE),
-        pr.term = mean(pr,na.rm = TRUE))
+#        pr.type = mean(pr.y,na.rm = TRUE),
+        pr.term = mean(pr.y,na.rm = TRUE))
 
-agg.customer.sex = merge(agg.customer,gnd,by='customer_id',all.x=TRUE)
+agg1.customer.sex = merge(agg1.customer,gnd,by='customer_id',all.x=TRUE)
 
-agg.customer.1   = subset(agg.customer.sex,!is.na(agg.customer.sex$gender))
+agg1.customer.1   = subset(agg1.customer.sex,!is.na(agg1.customer.sex$gender))
 
-agg.customer.2   = subset(agg.customer.sex, is.na(agg.customer.sex$gender))
-summary(agg.customer.2)
-agg.customer.1$pr.term[is.na(agg.customer.1$pr.term)]=0.5
-agg.customer.2$pr.term[is.na(agg.customer.2$pr.term)]=0.5
+agg1.customer.2   = subset(agg1.customer.sex, is.na(agg1.customer.sex$gender))
+summary(agg1.customer.2)
+agg1.customer.1$pr.term[is.na(agg1.customer.1$pr.term)]=0.5
+agg1.customer.2$pr.term[is.na(agg1.customer.2$pr.term)]=0.5
 
 
 #--------------------------------------------------------
@@ -70,17 +72,17 @@ param <- list( objective = "binary:logistic",
                silent    = 0)  
 
 
-dYtrain     <- as.matrix(agg.customer.1[,-grep("customer_id|gender|pr.type",names(agg.customer.1))])
-dYlabel     <- agg.customer.1$gender
-dYtest      <- as.matrix(agg.customer.2[,-grep("customer_id|gender|pr.type",names(agg.customer.2))])
+dYtrain     <- as.matrix(agg1.customer.1[,-grep("customer_id|gender|pr.type",names(agg1.customer.1))])
+dYlabel     <- agg1.customer.1$gender
+dYtest      <- as.matrix(agg1.customer.2[,-grep("customer_id|gender|pr.type",names(agg1.customer.2))])
 
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
 eta <- 0.02 #0.1 #0.05
 
-#agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
-#xyp = predict(agg.w.code.sex.glm,type='response')
+#agg1.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
+#xyp = predict(agg1.w.code.sex.glm,type='response')
 
 history = xgb.cv(tmp.matrix, 
                  nfold = 10, #5, #8, #25, # 10, 
@@ -133,21 +135,21 @@ bst = xgb.train (
 pre.train        = predict(bst,tmp.matrix);
 pre.test         = predict(bst,dYtest);
 
-#pre.test         = agg.customer.2$pr.term
+#pre.test         = agg1.customer.2$pr.term
 
 #---------------------------------------------------------
-#agg.customer.glm=glm(gender~.-customer_id,data=agg.customer.1,family='binomial')
-#summary(agg.customer.glm)
-#pre.train        = predict(agg.customer.glm,type='response')
+#agg1.customer.glm=glm(gender~.-customer_id,data=agg1.customer.1,family='binomial')
+#summary(agg1.customer.glm)
+#pre.train        = predict(agg1.customer.glm,type='response')
 
 hist(pre.train,breaks = 40)
-colAUC(pre.train,agg.customer.1$gender)
-colAUC(agg.customer.1$pr.term,agg.customer.1$gender)
+colAUC(pre.train,agg1.customer.1$gender)
+colAUC(agg1.customer.1$pr.term,agg1.customer.1$gender)
 
-#pre.test         = predict(agg.customer.glm,type='response',newdata = agg.customer.2)
+#pre.test         = predict(agg1.customer.glm,type='response',newdata = agg1.customer.2)
 hist(pre.test,breaks = 40)
 
-task1res= list('customer_id'=agg.customer.2$customer_id,
+task1res= list('customer_id'=agg1.customer.2$customer_id,
                "gender"=sprintf("%12.10f",pre.test))
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
 outfile = paste("./Result/task1-",nStep,'.csv',sep='') 
