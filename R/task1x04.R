@@ -101,66 +101,94 @@ agg1.tmp$durDays = NULL
 
 agg1.wday.col = merge(agg1.wday.col,agg1.tmp,by='customer_id')
 
-
-
 x=colSums(agg1.wday.col[,-c(1)])
 
 rm(agg1.tmp)
 
 
-### build mcc_code by customer_id
+### build month by customer_id
 
-if (FALSE) {
-  
-agg1.code = 
-  ddply(trs,.(customer_id,mcc_code),summarise,
-        nn = length(mcc_code),
+require(plyr)
+require(tidyr)
+
+agg1.month = 
+  ddply(trs,.(customer_id,month),summarise,
+        nn = length(month),
         ss = sum(amount),
         mm = mean(amount))
 
-agg1.code$col = paste("mcc","n",as.character(agg1.code$mcc_code),sep="_");
-agg1.code.col = spread(agg1.code[,c(1,3,6)],col,nn,fill=0)
+agg1.month$col = paste("mo","m",as.character(agg1.month$month),sep="_");
+agg1.month.col = spread(agg1.month[,c(1,5,6)],col,mm,fill=0)
 
-agg1.code$col = paste("mcc","s",as.character(agg1.code$mcc_code),sep="_");
-agg1.tmp      = spread(agg1.code[,c(1,4,6)],col,ss,fill=0)
-agg1.code.col = merge(agg1.code.col,agg1.tmp,by='customer_id')
+agg1.month$col = paste("mo","n",as.character(agg1.month$month),sep="_");
+agg1.tmp      = spread(agg1.month[,c(1,3,6)],col,nn,fill=0)
+agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays")))
 
-agg1.code$col = paste("mcc","m",as.character(agg1.code$mcc_code),sep="_");
-agg1.tmp      = spread(agg1.code[,c(1,5,6)],col,mm,fill=0)
-agg1.code.col = merge(agg1.code.col,agg1.tmp,by='customer_id')
+agg1.tmp.id   = agg1.tmp$customer_id
+agg1.tmp = agg1.tmp/agg1.tmp$durDays
+agg1.tmp$customer_id = agg1.tmp.id
+agg1.tmp$nn      = NULL
+agg1.tmp$durDays = NULL
 
-x=colSums(agg1.code.col[,-c(1)])
+agg1.month.col = merge(agg1.month.col,agg1.tmp,by='customer_id')
+
+agg1.month$col = paste("mo","s",as.character(agg1.month$month),sep="_");
+agg1.tmp      = spread(agg1.month[,c(1,4,6)],col,ss,fill=0)
+agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays")))
+
+agg1.tmp.id   = agg1.tmp$customer_id
+agg1.tmp = agg1.tmp/agg1.tmp$durDays
+agg1.tmp$customer_id = agg1.tmp.id
+agg1.tmp$nn      = NULL
+agg1.tmp$durDays = NULL
+
+agg1.month.col = merge(agg1.month.col,agg1.tmp,by='customer_id')
+
+x=colSums(agg1.month.col[,-c(1)])
 
 rm(agg1.tmp)
 
-}
+### build mday by customer_id
 
-### build tr_type by customer_id
+require(plyr)
+require(tidyr)
 
-if (FALSE) {
-
-agg1.type = 
-  ddply(trs,.(customer_id,tr_type),summarise,
-        nn = length(tr_type),
+agg1.mday = 
+  ddply(trs,.(customer_id,mday),summarise,
+        nn = length(mday),
         ss = sum(amount),
         mm = mean(amount))
 
-agg1.type$col = paste("trt","n",as.character(agg1.type$tr_type),sep="_");
-agg1.type.col = spread(agg1.type[,c(1,3,6)],col,nn,fill=0)
+agg1.mday$col = paste("md","m",as.character(agg1.mday$mday),sep="_");
+agg1.mday.col = spread(agg1.mday[,c(1,5,6)],col,mm,fill=0)
 
-agg1.type$col = paste("trt","s",as.character(agg1.type$tr_type),sep="_");
-agg1.tmp      = spread(agg1.type[,c(1,4,6)],col,ss,fill=0)
-agg1.type.col = merge(agg1.type.col,agg1.tmp,by='customer_id')
+agg1.mday$col = paste("md","n",as.character(agg1.mday$mday),sep="_");
+agg1.tmp      = spread(agg1.mday[,c(1,3,6)],col,nn,fill=0)
+agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays")))
 
-agg1.type$col = paste("trt","m",as.character(agg1.type$tr_type),sep="_");
-agg1.tmp      = spread(agg1.type[,c(1,5,6)],col,mm,fill=0)
-agg1.type.col = merge(agg1.type.col,agg1.tmp,by='customer_id')
+agg1.tmp.id   = agg1.tmp$customer_id
+agg1.tmp = agg1.tmp/agg1.tmp$durDays
+agg1.tmp$customer_id = agg1.tmp.id
+agg1.tmp$nn      = NULL
+agg1.tmp$durDays = NULL
 
-x=colSums(agg1.type.col[,-c(1)])
+agg1.mday.col = merge(agg1.mday.col,agg1.tmp,by='customer_id')
+
+agg1.mday$col = paste("md","s",as.character(agg1.mday$mday),sep="_");
+agg1.tmp      = spread(agg1.mday[,c(1,4,6)],col,ss,fill=0)
+agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays")))
+
+agg1.tmp.id   = agg1.tmp$customer_id
+agg1.tmp = agg1.tmp/agg1.tmp$durDays
+agg1.tmp$customer_id = agg1.tmp.id
+agg1.tmp$nn      = NULL
+agg1.tmp$durDays = NULL
+
+agg1.mday.col = merge(agg1.mday.col,agg1.tmp,by='customer_id')
+
+x=colSums(agg1.mday.col[,-c(1)])
 
 rm(agg1.tmp)
-
-}
 
 ### build term_id by customer_id (440339 unique term_id ?)
 
@@ -192,6 +220,8 @@ rm(agg1.tmp)
 ###----------------------------------------------------------
 
 agg1.tmp1 = merge(agg1.code.col,agg1.wday.col,by='customer_id')
+agg1.tmp1 = merge(agg1.tmp1,agg1.month.col,by='customer_id')
+agg1.tmp1 = merge(agg1.tmp1,agg1.mday.col, by='customer_id')
 agg1.tmp  = merge(agg1.cust,agg1.tmp1,by='customer_id')
 #agg1.tmp = merge(agg1.tmp, agg1.type.col,by='customer_id')
 
@@ -202,17 +232,11 @@ agg1.tmp  = merge(agg1.cust,agg1.tmp1,by='customer_id')
 #x=grep("(_n_)|(_m_)",names(agg1.tmp))
 agg1.cor  = (cor(subset(agg1.tmp,!is.na(gender))))['gender',]
 agg1.cor  = agg1.cor[!is.na(agg1.cor)]
-xy = agg1.cor[abs(agg1.cor)>0.02]
+agg1.cor.mt  = agg1.cor[grep("mt_",names(agg1.cor))]
+agg1.cor.not = agg1.cor[grep("mt_",names(agg1.cor),invert = TRUE)]
+xy = c(agg1.cor.not,agg1.cor.mt[abs(agg1.cor.mt)>0.005])
 agg1.tmp1 = agg1.tmp[,unique(c('customer_id',names(xy)))]
 #agg1.tmp1$durTimes = NULL
-
- 
-
-
-#agg1.lm  = glm(gender~.-customer_id,data = subset(agg1.tmp1,!is.na(gender)),family='binomial')
-#agg1.lm  = lm (gender~.-customer_id,data = subset(agg1.tmp1,!is.na(gender)))
-#summary(agg1.lm)
-
 
 ### ---------------------------------------------------------
 ### using xgb boosting
@@ -226,7 +250,7 @@ param <- list( objective = "binary:logistic",
                #               eval_metric = evalAuc,
                eval_metric = "auc",
                #tree_method = "exact",
-               gamma = 6, #1.5, #0.0022, #2.25, #2.25, # 1, # 2.25, #0.05,
+               gamma = 7, #1.5, #0.0022, #2.25, #2.25, # 1, # 2.25, #0.05,
                #min_child_weight = 8, #6, #7, #10, #8, #5, 
                #subsample = 0.6, #0.8,
                silent    = 0)  
@@ -245,7 +269,7 @@ dYtest      <- as.matrix(agg1.tmp2)
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
-eta <- 0.02 # 0.2 #0.05 # 0.02 #0.1 #0.05
+eta <- 0.05 # 0.02 # 0.2 #0.05 # 0.02 #0.1 #0.05
 
 #agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
 #xyp = predict(agg.w.code.sex.glm,type='response')
@@ -256,13 +280,13 @@ history = xgb.cv(tmp.matrix,
                  eta=eta, 
                  #max_depth=max_depth, 
                  params =param, 
-                 nrounds  =  4000,
+                 nrounds  =  1000,
                  #nrounds =  ifelse(eta<0.035,3000,600), 
                  #                 metrics = "auc", 
                  maximize = TRUE, #maxima, 
                  stratified = TRUE,
                  prediction=TRUE,
-                 early.stop.round = 50, 
+                 early.stop.round = 250, #50, 
                  print.every.n = 25);
 
 #     ------------ look results and select best result in history
@@ -308,11 +332,11 @@ pre.test         = predict(bst,dYtest);
 #summary(agg.customer.glm)
 #pre.train        = predict(agg.customer.glm,type='response')
 
-hist(pre.train,breaks = 40)
+hist(pre.train,breaks = 100)
 colAUC(pre.train,agg1.tmp1$gender[!is.na(agg1.tmp1$gender)])
 
 #pre.test         = predict(agg.customer.glm,type='response',newdata = agg.customer.2)
-hist(pre.test,breaks = 80)
+hist(pre.test,breaks = 100)
 
 #--------------------------------------------------------
 

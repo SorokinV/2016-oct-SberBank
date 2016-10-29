@@ -22,7 +22,18 @@ rm(hhh,timeX)
 
 trs$tr_datetime = NULL
 
-trs$wday = (trs$day+5)%%7
+trs$wday  = (trs$day+5)%%7
+
+x0        = as.Date('2008-08-01','%Y-%m-%d')
+
+months1   = c(31,28,31,30,31,30,31,31,30,31,30,31)
+months2   = c(31,29,31,30,31,30,31,31,30,31,30,31)
+ax        = trs$day+x0
+trs$mday  = as.numeric(strftime(ax,'%d'))
+trs$month = as.numeric(strftime(ax,'%m'))
+trs$tmday = months1[trs$month]-trs$mday # tail days from month end 
+
+rm(ax,months1,months2)
 
 ### Build main datas
 
