@@ -234,7 +234,8 @@ agg1.cor  = (cor(subset(agg1.tmp,!is.na(gender))))['gender',]
 agg1.cor  = agg1.cor[!is.na(agg1.cor)]
 agg1.cor.mt  = agg1.cor[grep("mt_",names(agg1.cor))]
 agg1.cor.not = agg1.cor[grep("mt_",names(agg1.cor),invert = TRUE)]
-xy = c(agg1.cor.not,agg1.cor.mt[abs(agg1.cor.mt)>0.005])
+#xy = c(agg1.cor.not,agg1.cor.mt[abs(agg1.cor.mt)>0.0005])
+xy = agg1.cor
 agg1.tmp1 = agg1.tmp[,unique(c('customer_id',names(xy)))]
 #agg1.tmp1$durTimes = NULL
 
@@ -269,7 +270,7 @@ dYtest      <- as.matrix(agg1.tmp2)
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
-eta <- 0.05 # 0.02 # 0.2 #0.05 # 0.02 #0.1 #0.05
+eta <- 0.03 # 0.02 # 0.2 #0.05 # 0.02 #0.1 #0.05
 
 #agg.w.code.sex.glm = glm(gender~.-customer_id,xys,family='binomial')
 #xyp = predict(agg.w.code.sex.glm,type='response')
@@ -280,8 +281,8 @@ history = xgb.cv(tmp.matrix,
                  eta=eta, 
                  #max_depth=max_depth, 
                  params =param, 
-                 nrounds  =  1000,
-                 #nrounds =  ifelse(eta<0.035,3000,600), 
+                 #nrounds  =  1000,
+                 nrounds =  ifelse(eta<0.035,4000,1000), 
                  #                 metrics = "auc", 
                  maximize = TRUE, #maxima, 
                  stratified = TRUE,
@@ -310,7 +311,7 @@ bst = xgb.train (
   tmp.matrix,
   eta=eta, 
   #max_depth=max_depth, 
-  nrounds = h_max+100, # 1500, # ifelse(eta<0.035,3000,800), 
+  nrounds = h_max+400, # 1500, # ifelse(eta<0.035,3000,800), 
   verbose=1, 
   print.every.n = 25,
   #watchlist=list(eval = dtest, train = tmp.matrix),
