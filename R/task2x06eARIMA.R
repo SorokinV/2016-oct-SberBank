@@ -135,7 +135,7 @@ ff.stlm <- function(zz.ts,zz.ff,ff.empty=c(2:24), printOK=FALSE) {
 }
 
 
-zz.window       = 30 # weeks 50*7=350 days
+zz.window       = 30 # weeks 50*7=350 days (21 week is baddly)
 zz.forecast.day = 30
 
 
@@ -169,23 +169,29 @@ for (mcc in task2.mcc)
 
   zz.ts = window(zz.ts,start=zz.window)
 
-  zz.ff = ff.ts(window(zz.ts,start=zz.window))
+  zz.ff = ff.ts(window(zz.ts,start=zz.window),ff.min = 3)
   
-  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=c(4:24),printOK = TRUE)
+  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=c(3:34),printOK = TRUE)
   ####zz.stlm      <- stlm(zz.ts); 
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
   #plot(zz.stlm$stl)
   #plot(zz.stlm.for)
+  #sqrt(sum(zz.stlm$residuals^2)/length(zz.stlm$residuals))
   
   if (length(zz.ff)>=1) {
     zz.ts = ts(zz.ts,frequency = zz.ff[1])
     zz.ff[1] = NA
     zz.ff    = zz.ff[!is.na(zz.ff)]
   }
+  
+  # shrink frequency from 4 for xreg build
+  
+  zz.ff = zz.ff[zz.ff>=4]
 
   if (length(zz.ff)==0) {
     zz.arima     = stlm(zz.ts,method = 'arima',
                               max.order=15,
+                              #trace=TRUE,
                               max.P=5,max.D=5,max.p = 5,max.q = 5,max.Q = 3)
     zz.arima.for = forecast(zz.arima,h=zz.forecast.day)
   }
@@ -213,13 +219,14 @@ for (mcc in task2.mcc)
   task2.rmse.arima[as.character(mcc)] = sqrt(sum(zz.arima$residuals^2)/length(zz.arima$residuals))
   task2.rmse.stlm [as.character(mcc)] = sqrt(sum(zz.stlm$residuals^2)/length(zz.stlm$residuals))
   
+  
   dfff         = as.numeric(zz.arima.for$mean); dfff=ifelse(dfff<=log(500),log(500),dfff)
   dff          = data.frame("volume"=exp(dfff)-500)
   dff$mcc_code = mcc
   dff$day      = c(1:30)
   task2.arima  = rbind(task2.arima,dff)
   if (task2.rmse.arima[as.character(mcc)]<=task2.rmse.stlm[as.character(mcc)])
-    task2      = rbind(task2.arima,dff)
+    task2      = rbind(task2,dff)
   
   dfff         = as.numeric(zz.stlm.for$mean); dfff=ifelse(dfff<=log(500),log(500),dfff)
   dff          = data.frame("volume"=exp(dfff)-500)
@@ -227,7 +234,7 @@ for (mcc in task2.mcc)
   dff$day      = c(1:30)
   task2.stlm   = rbind(task2.stlm,dff)
   if (task2.rmse.arima[as.character(mcc)]>task2.rmse.stlm[as.character(mcc)])
-    task2      = rbind(task2.stlm,dff)
+    task2      = rbind(task2,dff)
 
 }
 
@@ -239,16 +246,25 @@ summary(task2.rmse.arima)
 summary(task2.rmse.stlm)
 summary(task2.rmse)
 
-task2.rmse[as.character(c(3501,5681,5532,7512))]
-task2.rmse.arima[as.character(c(3501,5681,5532,7512))]
-task2.rmse.stlm[as.character(c(3501,5681,5532,7512))]
+xa = as.character(c(3501,5681,5532,7512,8299,8071,8220,5967,5968))
+task2.rmse[xa]
+task2.rmse.arima[xa]
+task2.rmse.stlm[xa]
 
 str(dff); 
 str(task2)
 
-task2.1 = task2[xa,]
+#xa=(c(1:nrow(task2))<=(184*30))
+task2.1 = task2 #[xa,]
 task2.1$day = task2.1$day + ds.max
 task2.1$volume[task2.1$volume<0] = 0.0
+
+task2.last = data.frame(rmse=task2.rmse,
+                        rmse.arima=task2.rmse.arima,
+                        rmse.stlm=task2.rmse.stlm,
+                        mcc_code=task2.mcc)
+
+#task2.last.best = task2.last
 
 
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
