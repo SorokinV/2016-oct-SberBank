@@ -111,6 +111,24 @@ ff.xreg.f <- function (zz.ts,zz.ff,zz.hh,frr=FALSE) {
 }
 
 
+ff.stlm <- function(zz.ts,zz.ff,ff.empty=2:24, printOK=FALSE) {
+  ff           <- ifelse(length(zz.ff)>0,zz.ff,c(ff.empty))
+  ff.rmse.best <- 10000;
+  ff.stlm.best <- NULL;
+  ff.best      <- -1;
+  for (i in ff) {
+    ff.stlm = stlm(zz.ts,s.window = i)
+    ff.rmse = sqrt(sum(ff.stlm$residuals^2)/length(ff.stlm$residuals))
+    if (ff.rmse.best>ff.rmse) {
+      ff.stlm.best <- ff.stlm
+      ff.rmse.best <- ff.rmse
+      ff.best      <- i
+    }
+  }
+  if (printOK) print(paste("ff.stlm",as.character(ff.rmse.best),as.character(ff.best)))
+  return(ff.stlm.best)
+}
+
 
 zz.window       = 30 # weeks 50*7=350 days
 zz.forecast.day = 30
@@ -143,8 +161,11 @@ for (mcc in task2.mcc)
 
   zz.ff = ff.ts(window(zz.ts,start=zz.window))
   
-  zz.stlm      <- stlm(zz.ts); 
+  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=4:24,printOK = TRUE)
+  ####zz.stlm      <- stlm(zz.ts); 
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
+  plot(zz.stlm$stl)
+  plot(zz.stlm.for)
   
   if (length(zz.ff)>=1) {
     zz.ts = ts(zz.ts,frequency = zz.ff[1])
