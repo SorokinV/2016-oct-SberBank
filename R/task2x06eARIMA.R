@@ -1,6 +1,7 @@
 require(plyr)
 require(tidyr)
 require(data.table)
+require(forecast)
 
 rm(list=setdiff(ls(),c('trs','trgnd','gnd','x0')))
 
@@ -111,8 +112,9 @@ ff.xreg.f <- function (zz.ts,zz.ff,zz.hh,frr=FALSE) {
 }
 
 
-ff.stlm <- function(zz.ts,zz.ff,ff.empty=2:24, printOK=FALSE) {
-  ff           <- ifelse(length(zz.ff)>0,zz.ff,c(ff.empty))
+ff.stlm <- function(zz.ts,zz.ff,ff.empty=c(2:24), printOK=FALSE) {
+  ff           <- ff.empty; if (length(zz.ff)>0) ff <- zz.ff;
+  ff           <- c(max(min(ff.empty),min(ff)-1):(max(ff)+1))
   ff.rmse.best <- 10000;
   ff.stlm.best <- NULL;
   ff.best      <- -1;
@@ -125,7 +127,10 @@ ff.stlm <- function(zz.ts,zz.ff,ff.empty=2:24, printOK=FALSE) {
       ff.best      <- i
     }
   }
-  if (printOK) print(paste("ff.stlm",as.character(ff.rmse.best),as.character(ff.best)))
+  if (printOK) print(paste("ff.stlm",
+                           as.character(ff.rmse.best),
+                           as.character(ff.best),
+                           "(",as.character(min(ff)),"-",as.character(max(ff)),")"))
   return(ff.stlm.best)
 }
 
@@ -145,6 +150,11 @@ names(task2.rmse) <- task2.mcc
 task2.rmse.stlm   <- task2.rmse
 task2.rmse.arima  <- task2.rmse
 
+task2.bic.arima   <- task2.rmse
+task2.bic.stlm    <- task2.rmse
+task2.bic         <- task2.rmse
+
+
 ii = 0; time.begin = Sys.time()
 
 for (mcc in task2.mcc)
@@ -161,11 +171,11 @@ for (mcc in task2.mcc)
 
   zz.ff = ff.ts(window(zz.ts,start=zz.window))
   
-  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=4:24,printOK = TRUE)
+  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=c(4:24),printOK = TRUE)
   ####zz.stlm      <- stlm(zz.ts); 
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
-  plot(zz.stlm$stl)
-  plot(zz.stlm.for)
+  #plot(zz.stlm$stl)
+  #plot(zz.stlm.for)
   
   if (length(zz.ff)>=1) {
     zz.ts = ts(zz.ts,frequency = zz.ff[1])
