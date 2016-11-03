@@ -171,7 +171,7 @@ for (mcc in task2.mcc)
   zz.ts = window(zz.ts,start=zz.window)
 
   
-  zz.stlm      <- ets(zz.ts)
+  zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
   
   #plot(zz.stlm$stl)
