@@ -115,7 +115,8 @@ ff.xreg.f <- function (zz.ts,zz.ff,zz.hh,frr=FALSE) {
 ff.stlm <- function(zz.ts,zz.ff,ff.empty=c(2:24), printOK=FALSE) {
   ff           <- ff.empty; if (length(zz.ff)>0) ff <- zz.ff;
   ff           <- c(max(min(ff.empty),min(ff)-1):(max(ff)+1))
-  ff.rmse.best <- 10000;
+  ff           <- c(min(ff.empty):max((max(ff)+1),max(ff.empty)))
+  ff.rmse.best <- max(zz.ts);
   ff.stlm.best <- NULL;
   ff.best      <- -1;
   for (i in ff) {
@@ -135,7 +136,7 @@ ff.stlm <- function(zz.ts,zz.ff,ff.empty=c(2:24), printOK=FALSE) {
 }
 
 
-zz.window       = 30 # weeks 50*7=350 days (21 week is baddly)
+zz.window       = 30 # 30 # 45-- # weeks 50*7=350 days (21 week is baddly)
 zz.forecast.day = 30
 
 
@@ -169,12 +170,13 @@ for (mcc in task2.mcc)
 
   zz.ts = window(zz.ts,start=zz.window)
 
-  zz.ff = ff.ts(window(zz.ts,start=zz.window),ff.min = 3)
+  zz.ff   = ff.ts(window(zz.ts,start=zz.window),ff.min = 4)
+
+  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=c(4:34),printOK = TRUE)
   
-  zz.stlm      <- ff.stlm(zz.ts,zz.ff,ff.empty=c(3:34),printOK = TRUE)
-  ####zz.stlm      <- stlm(zz.ts); 
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
   #plot(zz.stlm$stl)
+  ##summary(zz.stlm$stl)
   #plot(zz.stlm.for)
   #sqrt(sum(zz.stlm$residuals^2)/length(zz.stlm$residuals))
   
@@ -214,7 +216,11 @@ for (mcc in task2.mcc)
     
     zz.arima.for  = forecast(zz.arima,h=zz.forecast.day,
                             xreg = zz.xreg.f)
-    }
+    #plot(zz.arima$stl)
+    #summary(zz.arima$model)
+    #plot(zz.arima.for)
+    sqrt(sum(zz.stlm$residuals^2)/length(zz.stlm$residuals))
+  }
   
   task2.rmse.arima[as.character(mcc)] = sqrt(sum(zz.arima$residuals^2)/length(zz.arima$residuals))
   task2.rmse.stlm [as.character(mcc)] = sqrt(sum(zz.stlm$residuals^2)/length(zz.stlm$residuals))
@@ -259,13 +265,20 @@ task2.1 = task2 #[xa,]
 task2.1$day = task2.1$day + ds.max
 task2.1$volume[task2.1$volume<0] = 0.0
 
+if (FALSE) {
+
 task2.last = data.frame(rmse=task2.rmse,
                         rmse.arima=task2.rmse.arima,
                         rmse.stlm=task2.rmse.stlm,
                         mcc_code=task2.mcc)
 
-#task2.last.best = task2.last
+task2.last.bad = data.frame(rmse=task2.rmse,
+                        rmse.arima=task2.rmse.arima,
+                        rmse.stlm=task2.rmse.stlm,
+                        mcc_code=task2.mcc)
 
+#task2.last.best = task2.last
+}
 
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
 outfile = paste("./Result/task2-",nStep,'.csv',sep='') 
