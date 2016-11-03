@@ -85,7 +85,9 @@ for (ii in 1:nrow(df.for)) {
   ## rmse = 1.76 (don't best) 04.11.2016
   ## zz.stl          = stlm(zz)#,s.window=NULL)#,method = 'arima')
   
-  zz.stl          = ets (zz)#,s.window=NULL)#,method = 'arima')
+  #  rmse = 1.3168 (best with mse 04:00 04/11/2016)
+  zz.stl          = ets (zz,opt.crit = 'mse')#,s.window=NULL)#,method = 'arima')
+  
   #plot(zz.stl$stl)
   #sqrt(sum(zz.stl$residuals^2)/length(zz.stl$residuals))
   zz.for          = forecast(zz.stl,h=1)
