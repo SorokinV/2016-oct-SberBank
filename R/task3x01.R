@@ -3,6 +3,9 @@ require(plyr)
 #require(caTools)
 require(forecast)
 
+# Clear variables
+
+rm(list=setdiff(ls(),c('trs','trgnd','gnd','x0')))
 
 # Build absent customer_id in gender data
 
@@ -38,34 +41,15 @@ trs3 = subset(trs3,amount<0)
 
 rm(df)
 
-# build days and month
+#--------------------------
 
-#--------------------------------------------------------
 
-# regexpr("[0-9]+","00 00:00:00")
+trs3$month = floor((trs3$day+29-(max(trs3$day)%%30))/30)
 
-dd = regexpr("[0-9]+",trs$tr_datetime); 
-ds = as.numeric(substr(trs$tr_datetime,dd,dd+attr(dd,"match.length")-1)); 
-ds.max = max(ds)
-
-dd = regexpr("[0-9]+",trs3$tr_datetime)
-ds = as.numeric(substr(trs3$tr_datetime,dd,dd+attr(dd,"match.length")-1)); 
-# last day is number = 489, next day is 480 and month = 16
-ds = ds + 29 - (ds.max %% 30) 
-head(ds)
-
-md = ds %% 30
-mm =  floor(ds / 30)
-head(md); head(mm); 
-trs3$day=ds
-trs3$month = mm
-trs3$m.day = md
 trs3$tr_datetime = NULL
 trs3$tr_type     = NULL
 trs3$term_id = NULL
 
-
-rm(dd,ds,md,mm)
 
 str(trs3)
 
@@ -87,7 +71,6 @@ agg3.for =
 #------------------------------------------------------------
 
 df.for = subset(agg3.for,(max.month>=10)&(cnt.month>=3))
-df.i   = 0
 df   = data.frame()
 df.m = data.frame(month=0:15)
 
@@ -99,16 +82,19 @@ for (ii in 1:nrow(df.for)) {
   zz.df           = merge(df.m,zz.df,all.x=TRUE); zz.df$amount[is.na(zz.df$amount)] = 0.0 
   zz              = ts(log(1-zz.df$amount), frequency = 2)
   #print(zz)
-  zz.stl          = stlm(zz,s.window="per")
+  ## rmse = 1.76 (don't best) 04.11.2016
+  ## zz.stl          = stlm(zz)#,s.window=NULL)#,method = 'arima')
+  
+  zz.stl          = ets (zz)#,s.window=NULL)#,method = 'arima')
   #plot(zz.stl$stl)
+  #sqrt(sum(zz.stl$residuals^2)/length(zz.stl$residuals))
   zz.for          = forecast(zz.stl,h=1)
   dff             = data.frame("volume"=exp(as.numeric(zz.for$mean))-1)
   dff$customer_id = df.for$customer_id[ii]
   dff$mcc_code    = df.for$mcc_code[ii]
   df           = rbind(df,dff)
   
-  df.i = df.i + 1
-  #if (df.i>=1000) break();
+  #if (ii>=1000) break();
   
 }
 
@@ -126,6 +112,6 @@ str(task3)
 
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
 outfile = paste("./Result/task3-",nStep,'.csv',sep='') 
-write.csv(task3[c(1,2,3)],file=outfile,quote=FALSE,row.names=FALSE)
+write.csv(task3[c(2,1,3)],file=outfile,quote=FALSE,row.names=FALSE)
 
 
