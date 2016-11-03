@@ -170,8 +170,10 @@ for (mcc in task2.mcc)
 
   zz.ts = window(zz.ts,start=zz.window)
 
+  ## best = 1.666384 02:45 2016-08-04  
+  #zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
   
-  zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
+  zz.stlm      <- ets(zz.ts,opt.crit = 'amse')
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
   
   #plot(zz.stlm$stl)
