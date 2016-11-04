@@ -82,11 +82,18 @@ for (ii in 1:nrow(df.for)) {
   zz.df           = merge(df.m,zz.df,all.x=TRUE); zz.df$amount[is.na(zz.df$amount)] = 0.0 
   zz              = ts(log(1-zz.df$amount), frequency = 2)
   #print(zz)
-  ## rmse = 1.76 (don't best) 04.11.2016
+  
+  ## rmse = 1.36 (don't best) 04.11.2016 (opt.crit=likehood)
   ## zz.stl          = stlm(zz)#,s.window=NULL)#,method = 'arima')
   
   #  rmse = 1.3168 (best with mse 04:00 04/11/2016)
   zz.stl          = ets (zz,opt.crit = 'mse')#,s.window=NULL)#,method = 'arima')
+  
+  #  mae  result = 1.396713 
+  ##zz.stl          = ets (zz,opt.crit = 'mae')#,s.window=NULL)#,method = 'arima')
+  
+  #  sigma  result = 1.316878
+  zz.stl          = ets (zz,opt.crit = 'sigma')
   
   #plot(zz.stl$stl)
   #sqrt(sum(zz.stl$residuals^2)/length(zz.stl$residuals))
