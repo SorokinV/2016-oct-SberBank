@@ -168,7 +168,7 @@ for (mcc in task2.mcc)
   zz    = agg2.mcc.ts$ss[agg2.mcc.ts$mcc_code==mcc]
   zz.ts = ts(log(500-zz),frequency = 7)
 
-  zz.ts = window(zz.ts,start=zz.window)
+  #zz.ts = window(zz.ts,start=zz.window)
 
   ## best = 1.666384 02:45 2016-08-04  
   #zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
@@ -176,7 +176,13 @@ for (mcc in task2.mcc)
   ## nmse=30 == best 1.666384
   #zz.stlm      <- ets(zz.ts,opt.crit = 'mse',nmse=30)
   
-  zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
+  #  (best) rmse=10 alldata = 1.649352
+  #  rmse=default=3 alldata = 1.650231 allow.multiplicate.trend=TRUE
+  #zz.stlm      <- ets(zz.ts,opt.crit = 'mse',allow.multiplicative.trend = TRUE)
+  #  rmse=default=3 alldata = 1.650    allow.multiplicate.trend=TRUE,restrict=FALSE
+  #zz.stlm      <- ets(zz.ts,opt.crit = 'mse',allow.multiplicative.trend = TRUE,restrict=FALSE)
+  
+  zz.stlm      <- ets(zz.ts,opt.crit = 'mse',allow.multiplicative.trend = TRUE,restrict=FALSE)
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
   
   #plot(zz.stlm$stl)
