@@ -70,7 +70,10 @@ agg3.for =
 
 #------------------------------------------------------------
 
-df.for = subset(agg3.for,(max.month>=10)&(cnt.month>=3))
+# (best) df.for = subset(agg3.for,(max.month>=10)&(cnt.month>=3))
+# rmse = 1.33 df.for = agg3.for
+# rmse = 1.33 df.for = subset(agg3.for,(max.month>=7)) #&(cnt.month>=3))
+df.for = subset(agg3.for,(max.month>=12)&(cnt.month>=3))
 df   = data.frame()
 df.m = data.frame(month=0:15)
 
@@ -87,13 +90,19 @@ for (ii in 1:nrow(df.for)) {
   ## zz.stl          = stlm(zz)#,s.window=NULL)#,method = 'arima')
   
   #  rmse = 1.3168 (best with mse 04:00 04/11/2016)
-  zz.stl          = ets (zz,opt.crit = 'mse')#,s.window=NULL)#,method = 'arima')
+  #zz.stl          = ets (zz,opt.crit = 'mse')
   
   #  mae  result = 1.396713 
   ##zz.stl          = ets (zz,opt.crit = 'mae')#,s.window=NULL)#,method = 'arima')
   
   #  sigma  result = 1.316878
-  zz.stl          = ets (zz,opt.crit = 'sigma')
+  #zz.stl          = ets (zz,opt.crit = 'sigma')
+  
+  #  all datas and nmse = 10 rmse = 1.33 (baddly)
+  #zz.stl          = ets (zz,opt.crit = 'mse',nmse=10)
+  
+  #  all datas rmse =
+  zz.stl          = ets (zz,opt.crit = 'mse')
   
   #plot(zz.stl$stl)
   #sqrt(sum(zz.stl$residuals^2)/length(zz.stl$residuals))
