@@ -136,7 +136,7 @@ ff.stlm <- function(zz.ts,zz.ff,ff.empty=c(2:24), printOK=FALSE) {
 }
 
 
-zz.window       = 30 # 30 # 45-- # weeks 50*7=350 days (21 week is baddly)
+zz.window       =  1 # 30 - best # 45-- # weeks 50*7=350 days (21 week is baddly)
 zz.forecast.day = 30
 
 
@@ -172,8 +172,11 @@ for (mcc in task2.mcc)
 
   ## best = 1.666384 02:45 2016-08-04  
   #zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
+
+  ## nmse=30 == best 1.666384
+  #zz.stlm      <- ets(zz.ts,opt.crit = 'mse',nmse=30)
   
-  zz.stlm      <- ets(zz.ts,opt.crit = 'amse')
+  zz.stlm      <- ets(zz.ts,opt.crit = 'mse')
   zz.stlm.for  <- forecast(zz.stlm,h=zz.forecast.day)
   
   #plot(zz.stlm$stl)
@@ -219,7 +222,7 @@ task2.last.bad = data.frame(rmse=task2.rmse,
                         rmse.stlm=task2.rmse.stlm,
                         mcc_code=task2.mcc)
 
-#task2.last.best = task2.last
+task2.last.best = task2.last
 }
 
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
