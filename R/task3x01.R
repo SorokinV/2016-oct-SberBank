@@ -73,7 +73,9 @@ agg3.for =
 # (best) df.for = subset(agg3.for,(max.month>=10)&(cnt.month>=3))
 # rmse = 1.33 df.for = agg3.for
 # rmse = 1.33 df.for = subset(agg3.for,(max.month>=7)) #&(cnt.month>=3))
-df.for = subset(agg3.for,(max.month>=12)&(cnt.month>=3))
+#df.for = subset(agg3.for,(max.month>=12)&(cnt.month>=3))
+#best all data with cnt.month>=3 rmse500=1.315945
+df.for = subset(agg3.for,(cnt.month>=3))
 df   = data.frame()
 df.m = data.frame(month=0:15)
 
@@ -101,7 +103,7 @@ for (ii in 1:nrow(df.for)) {
   #  all datas and nmse = 10 rmse = 1.33 (baddly)
   #zz.stl          = ets (zz,opt.crit = 'mse',nmse=10)
   
-  #  all datas rmse =
+  #  all datas(month.count>=3) rmse =
   zz.stl          = ets (zz,opt.crit = 'mse')
   
   #plot(zz.stl$stl)
@@ -119,6 +121,7 @@ for (ii in 1:nrow(df.for)) {
 print(paste(Sys.time(),"end",ii))
 
 str(df)
+
 
 rm(zz,zz.stl,zz.for,dff)
 
