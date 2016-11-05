@@ -76,6 +76,10 @@ agg3.for =
 #df.for = subset(agg3.for,(max.month>=12)&(cnt.month>=3))
 #best all data with cnt.month>=3 rmse500=1.315945
 df.for = subset(agg3.for,(cnt.month>=3))
+# all datas cnt.month>=2 rmse=1.324303
+# all datas cnt.month>=4 rmse=1.323658
+##df.for = subset(agg3.for,(cnt.month>=4))
+
 df   = data.frame()
 df.m = data.frame(month=0:15)
 
