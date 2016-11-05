@@ -1,41 +1,26 @@
 require(plyr)
 #require(tidyr)
 
+rm(list=setdiff(ls(),c('trs','trgnd','gnd','x0')))
+
 #
 # get minus transaction and build days
 #
 
 trsm = subset(trs,trs$amount<0.0)
 
-dd = regexpr("[0-9]+",trs$tr_datetime);
-ds = as.numeric(substr(trs$tr_datetime,dd,dd+attr(dd,"match.length")-1)); 
-ds.max = max(ds)
+ds.max = max(trsm$day)
+#ds.max = ds.max - 30  ###
 
-ds.max = ds.max - 30  ###
-
-dsm  = as.numeric(ds[trs$amount<0.0])
-trsm$day = dsm
-#dsmw = dsm %% 7
-
-rm(dd,ds,dsm)
-
-hh = regexpr("[0-9]+[0-9]+:[0-9]+[0-9]+:[0-9]+[0-9]+",trsm$tr_datetime)
-h  = substr(trsm$tr_datetime,hh+0,hh+8-1)
-h  = strptime(h,"%H:%M:%S"); 
-
-trsm$time =(h$hour*60+h$min)*60+(h$sec%%60);
-
-rm(h,hh)
-
-#trsm = subset(trsm,time==0)
+#--------------------------------------------------
 
 agg2.mcc = 
   ddply(trsm, ###
         .(mcc_code,day),summarise,
-        ssum=sum(amount),
-        nn=length(amount),
-        mmean=mean(amount),
-        ssd=sd(amount))
+        ss  = sum(amount),
+        nn  = length(amount),
+        mm  = mean(amount))
+
 
 # -----------------------------------------
 # build grid for mcc-code and day
@@ -58,7 +43,7 @@ rm(iCount,df.temp.0,df.temp.1)
 # build timeSeries from all days min-max
 
 agg2.mcc.ts = merge(df[c(2,1)],agg2.mcc[c(1,2,3)],all.x=TRUE); 
-agg2.mcc.ts$ssum[is.na(agg2.mcc.ts$ssum)]=0.0; str(agg2.mcc.ts)
+agg2.mcc.ts$ss[is.na(agg2.mcc.ts$ss)]=0.0; str(agg2.mcc.ts)
 
 agg2.mcc.ts$wday = (agg2.mcc.ts$day+5)%%7  ###
 
@@ -73,91 +58,74 @@ agg2.mcc.ts = subset(agg2.mcc.ts,day<=ds.max)
 
 require(Rssa)
 
+zz.forecast.day = 30
 task2 = data.frame()
 
-zz.null  = -100
-zz.break =  200
+task2.mcc         <- unique(agg2.mcc.ts$mcc_code)
 
-for (mcc in unique(agg2.mcc.ts$mcc_code)) {
-  zz           = agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==mcc]
-  zz.len       = length(zz[zz<zz.null])
-  zz.list      = ifelse(zz.len<=zz.break,list(1:59),list(1))
-  zz.L         = 367
-  #zz           = zz[(ds.max-7*55):ds.max]
-  zz.ssa       = ssa(ts(log(500-zz),start=0,frequency = 7),neig = 65,L=zz.L)
-  #zz.ssa       = ssa(ts(zz,start=0,frequency = 7))
-  zz.for       = predict(zz.ssa,len=30,groups = zz.list)
-  dff          = data.frame("volume"=exp(as.numeric(zz.for))-500)
-  #dff          = data.frame("volume"=as.numeric(zz.for))
+task2.rmse.ssa    <- rep(-1,times=length(task2.mcc))
+names(task2.rmse.ssa) <- task2.mcc
+
+ii = 0; time.begin = Sys.time()
+
+for (mcc in task2.mcc) {
+  
+  ii  = ii+1
+  print(paste(Sys.time(),"mcc ==> (",as.character(ii),")",as.character(mcc)))
+
+  zz           = agg2.mcc.ts$ss[agg2.mcc.ts$mcc_code==mcc]
+  zz.ts.1      = ts(log(500-zz),start=0,frequency = 7)
+  zz.ts        = window(zz.ts.1,start=0)
+  
+  #Pacf(zz);
+  #Pacf(zz.ts);
+  
+  zz.ssa       = ssa(zz.ts,neig=60,L=60) #zz.L)
+  
+  g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=1:60,nclust=8)
+  plot(wcor(zz.ssa,g1))
+  r1 <- reconstruct(zz.ssa,groups = g1)
+  r1.res <- attr(r1,'residual')
+  #sqrt(sum(r1.res^2)/length(r1.res))
+  #plot(r1)
+
+  zz.for       = predict(zz.ssa,len=zz.forecast.day,groups = g1)
+#  plot(zz.for[[4]])
+  zz.for.1     = zz.for[[1]]; 
+  for(jj in 2:length(zz.for)) 
+    zz.for.1 = zz.for.1 + zz.for[[jj]];
+  #plot(zz.for.1)
+
+  task2.rmse.ssa [as.character(mcc)] = sqrt(sum(r1.res^2)/length(r1.res))
+
+  dff          = data.frame("volume"=exp(as.numeric(zz.for.1))-500)
   dff$mcc_code = mcc
   dff$day      = c(1:30)
   task2        = rbind(task2,dff)
   
 }
 
-str(dff); 
-str(task2)
+print(paste("Work timing (min) :",as.character(Sys.time()-time.begin)))
+
+summary(task2.rmse.ssa)
 
 rm(zz,zz.ssa,zz.for,dff)
 
-task2$day = task2$day+max(agg2.mcc.ts$day)
-#task2$day = task2$day+max(agg2.mcc.ts$day)
+####-----------------------------------------------------------------
 
-task2.diff = merge(task2,agg2.mcc.ts.full,by=c('mcc_code','day'),all.x=TRUE)
+xa = as.character(c(3501,5681,5532,7512,8299,8071,8220,5967,5968))
+task2.rmse.ssa[xa]
 
-str(task2.diff)
+str(task2)
 
-task2.diff$RMSE = log(500-task2.diff$ssum)-log(abs(task2.diff$volume)+500)
-print(sqrt(sum((task2.diff$RMSE)^2)/length(task2.diff$RMSE)))
-plot(sort(task2.diff$RMSE))
-hist(task2.diff$RMSE,breaks = 50)
-
-agg2.mcc.rmse = 
-  ddply(task2.diff, ###
-        .(mcc_code),summarise,
-        error=sum(abs(RMSE)),
-        z.len=length(agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==mcc_code&agg2.mcc.ts$ssum<zz.null]))
-
-min(abs(agg2.mcc.rmse$error))
-agg2.mcc.rmse$mcc_code[which.min(abs(agg2.mcc.rmse$error))]
-max(abs(agg2.mcc.rmse$error))
-agg2.mcc.rmse$mcc_code[which.max(abs(agg2.mcc.rmse$error))]
-plot(agg2.mcc.rmse$error)
-plot(agg2.mcc.rmse$error,agg2.mcc.rmse$z.len)
-
-sum(agg2.mcc.rmse$error)
-sum(agg2.mcc.rmse$error[agg2.mcc.rmse$z.len<zz.break])
-sum(agg2.mcc.rmse$error[agg2.mcc.rmse$z.len>=zz.break])
+#xa=(c(1:nrow(task2))<=(184*30))
+task2.1 = task2 #[xa,]
+task2.1$day = task2.1$day + ds.max
+task2.1$volume[task2.1$volume<0] = 0.0
 
 
-max(abs(task2.diff$RMSE))
-big = which.max(abs(task2.diff$RMSE))
-big.mcc_code = task2.diff$mcc_code[big]
-print(task2.diff$mcc_code[big])
-print(task2.diff$day[big])
+nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
+outfile = paste("./Result/task2-",nStep,'.csv',sep='') 
+write.csv(task2.1[c(2,3,1)],file=outfile,quote=FALSE,row.names=FALSE)
 
-bbig=subset(task2.diff,task2.diff$mcc_code==big.mcc_code); bbig
-
-bbig.ts = ts(agg2.mcc.ts$ssum[agg2.mcc.ts$mcc_code==big.mcc_code],start=0,frequency = 7)
-
-agg2.wday = 
-  ddply(subset(agg2.mcc.ts,mcc_code==big.mcc_code&day>=(426-55)), ###
-        .(wday),summarise,
-        volume=sum(ssum),
-        mean=mean(ssum),
-        sd=sd(ssum),
-        l0=length(ifelse(ssum<0,ssum,NA)))
-
-agg2.wday
-plot(agg2.wday$volume)
-
-agg2.cust = subset(trsm,mcc_code==big.mcc_code&day>=(426-55));
-unique(agg2.cust$customer_id)
-
-
-#---------------------------------------------
-
-###nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
-###outfile = paste("./Result/task2-",nStep,'.csv',sep='') 
-###write.csv(task2[c(2,3,1)],file=outfile,quote=FALSE,row.names=FALSE)
 
