@@ -83,7 +83,7 @@ for (mcc in task2.mcc) {
   zz.ssa       = ssa(zz.ts,neig=60,L=60) #zz.L)
   
   g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=1:60,nclust=8)
-  plot(wcor(zz.ssa,g1))
+  #plot(wcor(zz.ssa,g1))
   r1 <- reconstruct(zz.ssa,groups = g1)
   r1.res <- attr(r1,'residual')
   #sqrt(sum(r1.res^2)/length(r1.res))
@@ -91,9 +91,9 @@ for (mcc in task2.mcc) {
 
   zz.for       = predict(zz.ssa,len=zz.forecast.day,groups = g1)
 #  plot(zz.for[[4]])
-  zz.for.1     = zz.for[[1]]; 
-  for(jj in 2:2) #length(zz.for)) 
-    zz.for.1 = zz.for.1 + zz.for[[jj]];
+  zz.for.1     = zz.for[[1]]+zz.for[[8]]; 
+  #for(jj in 2:3) #length(zz.for)) 
+  #  zz.for.1 = zz.for.1 + zz.for[[jj]];
   #plot(zz.for.1)
 
   r1.res = 
@@ -130,3 +130,30 @@ outfile = paste("./Result/task2-",nStep,'.csv',sep='')
 write.csv(task2.1[c(2,3,1)],file=outfile,quote=FALSE,row.names=FALSE)
 
 
+###----------------------------------------
+
+unlist(lapply(r1,sd))/(unlist(lapply(r1,max))-unlist(lapply(r1,min)))
+plot(r1[[1]]+r1[[2]]+r1[[3]]+r1[[4]])
+
+yy = subset(agg2.mcc.ts.full,agg2.mcc.ts.full$day>=427&agg2.mcc.ts.full$mcc_code==mcc)
+yy.ts = ts(log(500-yy$ss),frequency = 7,start=61)
+plot(yy.ts)
+plot(zz.for[[1]]+zz.for[[2]]+zz.for[[3]]+zz.for[[4]]+
+     zz.for[[5]]+zz.for[[6]]+zz.for[[7]]+zz.for[[8]])
+yy.res = (zz.for[[1]]+zz.for[[2]]+zz.for[[3]]+zz.for[[4]]+
+          zz.for[[5]]+zz.for[[6]]+zz.for[[7]]+zz.for[[8]]-yy.ts)#-
+          zz.for[[6]]-zz.for[[5]]-zz.for[[4]]-zz.for[[3]]-
+          zz.for[[2]]-zz.for[[7]]#-zz.for[[8]]
+yy.res = (zz.for[[1]]-yy.ts)+zz.for[[8]]+zz.for[[7]]+zz.for[[6]]
+yy.res = (zz.for[[1]]-yy.ts)+
+#  zz.for[[2]]+
+#  zz.for[[3]]+
+#  zz.for[[4]]+
+#  zz.for[[5]]+
+#  zz.for[[6]]+
+#  zz.for[[7]]#+
+  zz.for[[8]]
+##yy.res
+sqrt(sum(yy.res^2)/length(yy.res))
+plot(r1)
+plot(yy.res)
