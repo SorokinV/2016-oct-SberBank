@@ -92,10 +92,11 @@ for (mcc in task2.mcc) {
   zz.for       = predict(zz.ssa,len=zz.forecast.day,groups = g1)
 #  plot(zz.for[[4]])
   zz.for.1     = zz.for[[1]]; 
-  for(jj in 2:length(zz.for)) 
+  for(jj in 2:6) #length(zz.for)) 
     zz.for.1 = zz.for.1 + zz.for[[jj]];
   #plot(zz.for.1)
 
+  r1.res = 
   task2.rmse.ssa [as.character(mcc)] = sqrt(sum(r1.res^2)/length(r1.res))
 
   dff          = data.frame("volume"=exp(as.numeric(zz.for.1))-500)
@@ -109,7 +110,7 @@ print(paste("Work timing (min) :",as.character(Sys.time()-time.begin)))
 
 summary(task2.rmse.ssa)
 
-rm(zz,zz.ssa,zz.for,dff)
+#rm(zz,zz.ssa,zz.for,dff)
 
 ####-----------------------------------------------------------------
 
