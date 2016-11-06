@@ -58,7 +58,7 @@ agg2.mcc.ts = subset(agg2.mcc.ts,day<=ds.max)
 
 require(Rssa)
 
-estGroup  <- function(zz.for,zz.ts) {
+estGroup  <- function(zz.for,zz.ts,printOK=FALSE) {
    zz.cur = rowSums(as.data.frame((zz.for)))
 #   print(zz.cur)
    
@@ -67,8 +67,8 @@ estGroup  <- function(zz.for,zz.ts) {
    
    while (TRUE) {
      zz.res.i <- zz.res.min; i.res.i = 0;
-#     print(zz.res.min)
-#     print(zz.group)
+     if (printOK) print(zz.res.min)
+     if (printOK) print(zz.group)
      for (i in zz.group) {
        zz.cur.i = zz.cur-zz.for[[i]]
        zz.res.i = sqrt(sum((zz.cur.i-zz.ts)^2)/length(zz.ts))
@@ -86,12 +86,12 @@ estGroup  <- function(zz.for,zz.ts) {
 }
 
 
-ssa.L     = 60
-ssa.neig  = 60
+ssa.L     = 150 #60
+ssa.neig  = 90
 ssa.group = 1:60
-ssa.clust = 25 # 10
+ssa.clust = 70 # 10
 
-zz.window       = 35
+zz.window       = 5
 zz.forecast.day = 30
 zz.estimate     = 30
 task2 = data.frame()
@@ -110,19 +110,21 @@ for (mcc in task2.mcc) {
 
   zz           = agg2.mcc.ts$ss[agg2.mcc.ts$mcc_code==mcc]
   zz.ts.1      = ts(log(500-zz),start=0,frequency = 7)
-  zz.ts        = window(zz.ts.1,start=15)
+  zz.ts        = window(zz.ts.1,start=zz.window) #15)
 
   ## estimate groups  
   zz.ts.e      = zz.ts[1:(length(zz.ts)-zz.estimate)]
   zz.ssa       = ssa(zz.ts.e,neig=ssa.neig,L=ssa.L)
-  g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=ssa.group,nclust=ssa.clust)
-  #plot(wcor(zz.ssa,g1))
+  #g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=ssa.group,nclust=ssa.clust)
+  g1 <- grouping.auto(zz.ssa,grouping.method = "pgram",base='eigen',freq.bins=ssa.clust)
+  plot(wcor(zz.ssa,g1))
   r1 <- reconstruct(zz.ssa,groups = g1)
   #plot(r1)
   zz.for       = predict(zz.ssa,len=zz.estimate,groups = g1)
   zz.ts.ee     = zz.ts[(length(zz.ts)-zz.estimate+1):length(zz.ts)]
   
-  g1.e         <- estGroup(zz.for,zz.ts.ee)
+  g1.e         <- estGroup(zz.for,zz.ts.ee,printOK = FALSE)
+  
   #r1.e         <- reconstruct(zz.ssa,groups = g1.e)
   #plot(r1)
   #plot(r1.e)
@@ -133,7 +135,8 @@ for (mcc in task2.mcc) {
   
   zz.ssa       = ssa(zz.ts,neig=ssa.neig,L=ssa.L)
   
-  g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=ssa.group,nclust=ssa.clust)
+  #g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=ssa.group,nclust=ssa.clust)
+  g1 <- grouping.auto(zz.ssa,grouping.method = "pgram",base='eigen',freq.bins=ssa.clust)
   #plot(wcor(zz.ssa,g1))
   r1 <- reconstruct(zz.ssa,groups = g1.e)
   r1.res <- attr(r1,'residual')
@@ -178,31 +181,3 @@ write.csv(task2.1[c(2,3,1)],file=outfile,quote=FALSE,row.names=FALSE)
 
 task2.rmse.ssa.last = task2.rmse.ssa
 
-
-###----------------------------------------
-
-unlist(lapply(r1,sd))/(unlist(lapply(r1,max))-unlist(lapply(r1,min)))
-plot(r1[[1]]+r1[[2]]+r1[[3]]+r1[[4]])
-
-yy = subset(agg2.mcc.ts.full,agg2.mcc.ts.full$day>=427&agg2.mcc.ts.full$mcc_code==mcc)
-yy.ts = ts(log(500-yy$ss),frequency = 7,start=61)
-plot(yy.ts)
-plot(zz.for[[1]]+zz.for[[2]]+zz.for[[3]]+zz.for[[4]]+
-     zz.for[[5]]+zz.for[[6]]+zz.for[[7]]+zz.for[[8]])
-yy.res = (zz.for[[1]]+zz.for[[2]]+zz.for[[3]]+zz.for[[4]]+
-          zz.for[[5]]+zz.for[[6]]+zz.for[[7]]+zz.for[[8]]-yy.ts)#-
-          zz.for[[6]]-zz.for[[5]]-zz.for[[4]]-zz.for[[3]]-
-          zz.for[[2]]-zz.for[[7]]#-zz.for[[8]]
-yy.res = (zz.for[[1]]-yy.ts)+zz.for[[8]]+zz.for[[7]]+zz.for[[6]]
-yy.res = (zz.for[[1]]-yy.ts)+
-#  zz.for[[2]]+
-#  zz.for[[3]]+
-#  zz.for[[4]]+
-#  zz.for[[5]]+
-#  zz.for[[6]]+
-#  zz.for[[7]]#+
-  zz.for[[8]]
-##yy.res
-sqrt(sum(yy.res^2)/length(yy.res))
-plot(r1)
-plot(yy.res)
