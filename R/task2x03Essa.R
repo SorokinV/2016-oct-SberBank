@@ -89,8 +89,9 @@ estGroup  <- function(zz.for,zz.ts) {
 ssa.L     = 60
 ssa.neig  = 60
 ssa.group = 1:60
-ssa.clust = 10
+ssa.clust = 25 # 10
 
+zz.window       = 35
 zz.forecast.day = 30
 zz.estimate     = 30
 task2 = data.frame()
@@ -109,7 +110,7 @@ for (mcc in task2.mcc) {
 
   zz           = agg2.mcc.ts$ss[agg2.mcc.ts$mcc_code==mcc]
   zz.ts.1      = ts(log(500-zz),start=0,frequency = 7)
-  zz.ts        = window(zz.ts.1,start=0)
+  zz.ts        = window(zz.ts.1,start=15)
 
   ## estimate groups  
   zz.ts.e      = zz.ts[1:(length(zz.ts)-zz.estimate)]
@@ -136,11 +137,13 @@ for (mcc in task2.mcc) {
   #plot(wcor(zz.ssa,g1))
   r1 <- reconstruct(zz.ssa,groups = g1.e)
   r1.res <- attr(r1,'residual')
+  r1.res <- sqrt(sum(r1.res^2)/length(r1.res))
+  r1.res; task2.rmse.ssa.last[as.character(mcc)]
 
   zz.for       = predict(zz.ssa,len=zz.forecast.day,groups = g1.e)
   zz.for.1     = rowSums(as.data.frame(zz.for))
 
-  task2.rmse.ssa [as.character(mcc)] = sqrt(sum(r1.res^2)/length(r1.res))
+  task2.rmse.ssa [as.character(mcc)] = r1.res
 
   dff          = data.frame("volume"=exp(as.numeric(zz.for.1))-500)
   dff$mcc_code = mcc
@@ -152,6 +155,7 @@ for (mcc in task2.mcc) {
 print(paste("Work timing (min) :",as.character(Sys.time()-time.begin)))
 
 summary(task2.rmse.ssa)
+summary(task2.rmse.ssa.last)
 
 #rm(zz,zz.ssa,zz.for,dff)
 
@@ -171,6 +175,8 @@ task2.1$volume[task2.1$volume<0] = 0.0
 nStep   = strftime(Sys.time(),"%Y%m%d-%H%M%S")
 outfile = paste("./Result/task2-",nStep,'.csv',sep='') 
 write.csv(task2.1[c(2,3,1)],file=outfile,quote=FALSE,row.names=FALSE)
+
+task2.rmse.ssa.last = task2.rmse.ssa
 
 
 ###----------------------------------------
