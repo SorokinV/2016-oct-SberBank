@@ -33,7 +33,16 @@ trs$mday  = as.numeric(strftime(ax,'%d'))
 trs$month = as.numeric(strftime(ax,'%m'))
 trs$tmday = months1[trs$month]-trs$mday # tail days from month end 
 
-trs$H3  = trs$time%/%(3*60*60)
+trs$HH  = trs$time%/%(1*60*60)
+trs$H3  = trs$HH
+trs$H3[            trs$HH<6] = 0
+trs$H3[trs$HH>=6 &trs$HH<10] = 1
+trs$H3[trs$HH>=10&trs$HH<14] = 2
+trs$H3[trs$HH>=14&trs$HH<23] = 3
+trs$H3[trs$HH>=23&trs$HH<25] = 0
+
+#trs$H3  = trs$time%/%(4*60*60)
+
 
 rm(ax,months1,months2)
 

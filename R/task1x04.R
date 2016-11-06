@@ -126,13 +126,27 @@ agg1.H3 =
 
 agg1.H3$col = paste("h3","m",as.character(agg1.H3$H3),sep="_");
 agg1.H3.col = spread(agg1.H3[,c(1,5,6)],col,mm,fill=0)
+agg1.H3.col = data.frame(customer_id=agg1.H3.col$customer_id)
 
 agg1.H3$col = paste("h3","n",as.character(agg1.H3$H3),sep="_");
 agg1.tmp      = spread(agg1.H3[,c(1,3,6)],col,nn,fill=0)
 agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays",'lenDays')))
 
 agg1.tmp.id   = agg1.tmp$customer_id
-agg1.tmp = agg1.tmp/agg1.tmp$durDays
+agg1.tmp = agg1.tmp/agg1.tmp$nn #lenDays #durDays
+agg1.tmp$customer_id = agg1.tmp.id
+agg1.tmp$nn      = NULL
+agg1.tmp$durDays = NULL
+agg1.tmp$lenDays = NULL
+
+agg1.H3.col = merge(agg1.H3.col,agg1.tmp,by='customer_id')
+
+agg1.H3$col = paste("h3","s",as.character(agg1.H3$H3),sep="_");
+agg1.tmp      = spread(agg1.H3[,c(1,4,6)],col,ss,fill=0)
+agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays",'lenDays')))
+
+agg1.tmp.id   = agg1.tmp$customer_id
+agg1.tmp = agg1.tmp/agg1.tmp$durDays #lenDays #durDays #nn #lenDays #durDays
 agg1.tmp$customer_id = agg1.tmp.id
 agg1.tmp$nn      = NULL
 agg1.tmp$durDays = NULL
@@ -203,7 +217,7 @@ agg1.mday =
 agg1.mday$col = paste("md","m",as.character(agg1.mday$mday),sep="_");
 agg1.mday.col = spread(agg1.mday[,c(1,5,6)],col,mm,fill=0)
 
-if (TRUE) {
+if (FALSE) {
   
 agg1.mday$col = paste("md","n",as.character(agg1.mday$mday),sep="_");
 agg1.tmp      = spread(agg1.mday[,c(1,3,6)],col,nn,fill=0)
@@ -299,7 +313,8 @@ agg1.tmp  = merge(agg1.cust,agg1.tmp1,by='customer_id')
 #agg1.cor  = agg1.cor[!is.na(agg1.cor)]
 #agg1.cor.mt  = agg1.cor[grep("mt_",names(agg1.cor))]
 #agg1.cor.not = agg1.cor[grep("mt_",names(agg1.cor),invert = TRUE)]
-agg1.cor   = colSums(agg1.tmp)
+#agg1.cor   = colSums(agg1.tmp)
+agg1.cor   = agg1.tmp[1,]
 #xy = c(agg1.cor.not,agg1.cor.mt[abs(agg1.cor.mt)>0.0005])
 xy = agg1.cor
 agg1.tmp1 = agg1.tmp[,unique(c('customer_id','gender',names(xy)))]
@@ -352,7 +367,7 @@ history = xgb.cv(tmp.matrix,
                  maximize = TRUE, #maxima, 
                  stratified = TRUE,
                  prediction=TRUE,
-                 early.stop.round = ifelse(eta<0.035,250, 50), 
+                 early.stop.round = ifelse(eta<0.035,250, 100), 
                  print.every.n = 25);
 
 #     ------------ look results and select best result in history
@@ -382,11 +397,11 @@ bst = xgb.train (
   verbose=1, 
   print.every.n = 25,
   #watchlist=list(eval = dtest, train = tmp.matrix),
-  watchlist=list(eval = tmp.matrix),
-  #watchlist=list(train = tmp.matrix),
+  #watchlist=list(eval = tmp.matrix),
+  watchlist=list(train = tmp.matrix),
   metrics = "auc", 
   stratified = TRUE,
-  early.stop.round = 50,
+  early.stop.round = ifelse(eta<0.035,250, 100),
   maximize = TRUE)
 
 
