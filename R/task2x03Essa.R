@@ -58,7 +58,41 @@ agg2.mcc.ts = subset(agg2.mcc.ts,day<=ds.max)
 
 require(Rssa)
 
+estGroup  <- function(zz.for,zz.ts) {
+   zz.cur = rowSums(as.data.frame((zz.for)))
+#   print(zz.cur)
+   
+   zz.res.min <- sqrt(sum((zz.cur-zz.ts)^2)/length(zz.ts))
+   zz.group   <- c(1:length(zz.for))
+   
+   while (TRUE) {
+     zz.res.i <- zz.res.min; i.res.i = 0;
+#     print(zz.res.min)
+#     print(zz.group)
+     for (i in zz.group) {
+       zz.cur.i = zz.cur-zz.for[[i]]
+       zz.res.i = sqrt(sum((zz.cur.i-zz.ts)^2)/length(zz.ts))
+       if (zz.res.i<zz.res.min) {
+         zz.res.min = zz.res.i; i.res.i = i;
+       }
+     }
+     if (i.res.i==0) break;
+     if (length(zz.group)==1) break;
+     zz.cur   = zz.cur-zz.for[[i.res.i]]
+     zz.group = setdiff(zz.group,c(i.res.i))
+   }
+   
+   return(zz.group)
+}
+
+
+ssa.L     = 60
+ssa.neig  = 60
+ssa.group = 1:60
+ssa.clust = 10
+
 zz.forecast.day = 30
+zz.estimate     = 30
 task2 = data.frame()
 
 task2.mcc         <- unique(agg2.mcc.ts$mcc_code)
@@ -76,27 +110,36 @@ for (mcc in task2.mcc) {
   zz           = agg2.mcc.ts$ss[agg2.mcc.ts$mcc_code==mcc]
   zz.ts.1      = ts(log(500-zz),start=0,frequency = 7)
   zz.ts        = window(zz.ts.1,start=0)
+
+  ## estimate groups  
+  zz.ts.e      = zz.ts[1:(length(zz.ts)-zz.estimate)]
+  zz.ssa       = ssa(zz.ts.e,neig=ssa.neig,L=ssa.L)
+  g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=ssa.group,nclust=ssa.clust)
+  #plot(wcor(zz.ssa,g1))
+  r1 <- reconstruct(zz.ssa,groups = g1)
+  #plot(r1)
+  zz.for       = predict(zz.ssa,len=zz.estimate,groups = g1)
+  zz.ts.ee     = zz.ts[(length(zz.ts)-zz.estimate+1):length(zz.ts)]
+  
+  g1.e         <- estGroup(zz.for,zz.ts.ee)
+  #r1.e         <- reconstruct(zz.ssa,groups = g1.e)
+  #plot(r1)
+  #plot(r1.e)
+  
   
   #Pacf(zz);
   #Pacf(zz.ts);
   
-  zz.ssa       = ssa(zz.ts,neig=60,L=60) #zz.L)
+  zz.ssa       = ssa(zz.ts,neig=ssa.neig,L=ssa.L)
   
-  g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=1:60,nclust=8)
+  g1 <- grouping.auto(zz.ssa,grouping.method = "wcor",group=ssa.group,nclust=ssa.clust)
   #plot(wcor(zz.ssa,g1))
-  r1 <- reconstruct(zz.ssa,groups = g1)
+  r1 <- reconstruct(zz.ssa,groups = g1.e)
   r1.res <- attr(r1,'residual')
-  #sqrt(sum(r1.res^2)/length(r1.res))
-  #plot(r1)
 
-  zz.for       = predict(zz.ssa,len=zz.forecast.day,groups = g1)
-#  plot(zz.for[[4]])
-  zz.for.1     = zz.for[[1]]+zz.for[[8]]; 
-  #for(jj in 2:3) #length(zz.for)) 
-  #  zz.for.1 = zz.for.1 + zz.for[[jj]];
-  #plot(zz.for.1)
+  zz.for       = predict(zz.ssa,len=zz.forecast.day,groups = g1.e)
+  zz.for.1     = rowSums(as.data.frame(zz.for))
 
-  r1.res = 
   task2.rmse.ssa [as.character(mcc)] = sqrt(sum(r1.res^2)/length(r1.res))
 
   dff          = data.frame("volume"=exp(as.numeric(zz.for.1))-500)
