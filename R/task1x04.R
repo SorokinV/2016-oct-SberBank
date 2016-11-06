@@ -3,6 +3,8 @@ require(plyr)
 require(tidyr)
 require(caTools)
 
+rm(list=setdiff(ls(),c('trs','trgnd','gnd','x0')))
+
 ### build main aggregate table
 
 agg1.cust = 
@@ -110,6 +112,35 @@ agg1.tmp$lenDays = NULL
 agg1.wday.col = merge(agg1.wday.col,agg1.tmp,by='customer_id')
 
 x=colSums(agg1.wday.col[,-c(1)])
+
+rm(agg1.tmp)
+
+
+### build H3 by customer_id
+
+agg1.H3 = 
+  ddply(trs,.(customer_id,H3),summarise,
+        nn = length(H3),
+        ss = sum(amount),
+        mm = mean(amount))
+
+agg1.H3$col = paste("h3","m",as.character(agg1.H3$H3),sep="_");
+agg1.H3.col = spread(agg1.H3[,c(1,5,6)],col,mm,fill=0)
+
+agg1.H3$col = paste("h3","n",as.character(agg1.H3$H3),sep="_");
+agg1.tmp      = spread(agg1.H3[,c(1,3,6)],col,nn,fill=0)
+agg1.tmp      = merge(agg1.tmp,subset(agg1.cust,select=c("customer_id","nn","durDays",'lenDays')))
+
+agg1.tmp.id   = agg1.tmp$customer_id
+agg1.tmp = agg1.tmp/agg1.tmp$durDays
+agg1.tmp$customer_id = agg1.tmp.id
+agg1.tmp$nn      = NULL
+agg1.tmp$durDays = NULL
+agg1.tmp$lenDays = NULL
+
+agg1.H3.col = merge(agg1.H3.col,agg1.tmp,by='customer_id')
+
+x=colSums(agg1.H3.col[,-c(1)])
 
 rm(agg1.tmp)
 
@@ -259,6 +290,7 @@ rm(agg1.tmp)
 agg1.tmp1 = merge(agg1.code.col,agg1.wday.col,by='customer_id')
 agg1.tmp1 = merge(agg1.tmp1,agg1.month.col,by='customer_id')
 agg1.tmp1 = merge(agg1.tmp1,agg1.mday.col, by='customer_id')
+agg1.tmp1 = merge(agg1.tmp1,agg1.H3.col, by='customer_id')
 agg1.tmp  = merge(agg1.cust,agg1.tmp1,by='customer_id')
 #agg1.tmp = merge(agg1.tmp, agg1.type.col,by='customer_id')
 
@@ -304,11 +336,12 @@ dYtest      <- as.matrix(agg1.tmp2)
 
 tmp.matrix  <- xgb.DMatrix(dYtrain,label = dYlabel);
 
-eta <- 0.07 # 0.02 # 0.2 #0.05 # 0.02 #0.1 #0.05
+eta <- 0.03 # 0.02 # 0.2 #0.05 # 0.02 #0.1 #0.05
+nnfold <- 5
 
 set.seed(12341234)
 history = xgb.cv(tmp.matrix, 
-                 nfold = 10, #10, #5, #8, #25, # 10, 
+                 nfold = nnfold, #10, #5, #8, #25, # 10, 
                  #folds = folds,
                  eta=eta, 
                  #max_depth=max_depth, 
@@ -343,8 +376,9 @@ bst = xgb.train (
   params =param, 
   tmp.matrix,
   eta=eta, 
+  nfold = nnfold,
   #max_depth=max_depth, 
-  nrounds = h_max+400, # 1500, # ifelse(eta<0.035,3000,800), 
+  nrounds = h_max+700, # 1500, # ifelse(eta<0.035,3000,800), 
   verbose=1, 
   print.every.n = 25,
   #watchlist=list(eval = dtest, train = tmp.matrix),

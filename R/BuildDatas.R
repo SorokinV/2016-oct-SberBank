@@ -1,5 +1,5 @@
 require(data.table)
-require(plyr)
+#require(plyr)
 
 ### read main datas
 
@@ -32,6 +32,8 @@ ax        = trs$day+x0
 trs$mday  = as.numeric(strftime(ax,'%d'))
 trs$month = as.numeric(strftime(ax,'%m'))
 trs$tmday = months1[trs$month]-trs$mday # tail days from month end 
+
+trs$H3  = trs$time%/%(3*60*60)
 
 rm(ax,months1,months2)
 
